@@ -9,15 +9,15 @@
  */
 module.exports = {
   siteMetadata: {
-    title: `Gatsby Starter Blog`,
+    title: `slowly typing`,
     author: {
-      name: `Kyle Mathews`,
-      summary: `who lives and works in San Francisco building useful things.`,
+      name: `Mavrick Laakso`,
+      summary: `When not developing software, you can find him around a campfire, walking his dog, or between the pages of a book.`,
     },
-    description: `A starter blog demonstrating what Gatsby can do.`,
-    siteUrl: `https://gatsbystarterblogsource.gatsbyjs.io/`,
+    description: `Technical ramblings and miscellanea.`,
+    siteUrl: `https://slowlytyping.ca`,
     social: {
-      twitter: `kylemathews`,
+      email: 'laakso.mavrick@gmail.com',
     },
   },
   plugins: [
@@ -119,6 +119,19 @@ module.exports = {
         // theme_color: `#663399`,
         display: `minimal-ui`,
         icon: `src/images/gatsby-icon.png`, // This path is relative to the root of the site.
+      },
+    },
+    {
+      resolve: `gatsby-omni-font-loader`,
+      options: {
+        enableListener: true,
+        preconnect: [`https://fonts.googleapis.com`, `https://fonts.gstatic.com`],
+        web: [
+          {
+            name: `Open Sans`,
+            file: `https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap`,
+          },
+        ],
       },
     },
   ],
