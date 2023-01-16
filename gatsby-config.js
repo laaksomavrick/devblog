@@ -9,13 +9,13 @@
  */
 module.exports = {
   siteMetadata: {
-    title: `slowly typing`,
+    title: `technoblather`,
     author: {
       name: `Mavrick Laakso`,
-      summary: `When not developing software, you can find him around a campfire, walking his dog, or between the pages of a book.`,
+      summary: `When not developing software you can find him: around a campfire, walking his dog, or between the pages of a book.`,
     },
-    description: `Technical ramblings and miscellanea.`,
-    siteUrl: `https://slowlytyping.ca`,
+    description: `Technical blathering and whatever else comes to mind.`,
+    siteUrl: `https://technoblather.ca`,
     social: {
       email: 'laakso.mavrick@gmail.com',
     },
