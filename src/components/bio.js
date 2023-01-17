@@ -46,7 +46,7 @@ const Bio = () => {
         <p>
           Written by <strong>{author.name}</strong>. {author?.summary || null}
           {` `}
-            Contact him <a href={`mailto:${social.email}`}>here</a>.
+          Contact him <a href={`mailto:${social.email}`}>here</a>.
         </p>
       )}
     </div>
