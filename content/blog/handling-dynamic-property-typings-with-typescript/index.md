@@ -9,13 +9,13 @@ description: Learn how to leverage the keyof type operator with union types and 
 We've all been there. You're writing an integration against a web API. The access pattern is the same for each endpoint and you want to keep your code DRY. However, the responses you're observing have some common properties and some uncommon properties:
 
 ```
-GET /api/v1/books
+GET /api/v1/book/1
 
 {
     "status": 200,
     "error": null,
     "warnings": null,
-    "data": [{ id: 1, title: "Infinite Jest" }, ...]
+    "data": { id: 1, title: "Infinite Jest", ... }
 }
 
 GET /api/v1/authors
@@ -24,7 +24,7 @@ GET /api/v1/authors
     "status": 200,
     "error": null,
     "warnings": null,
-    "data": [{ id: 1, name: "David Foster Wallace" }, ...]
+    "data": [{ id: 1, name: "David Foster Wallace", ... }, ...]
 }
 
 ...
