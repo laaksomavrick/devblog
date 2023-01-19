@@ -136,7 +136,7 @@ const authorsResponse: AuthorsApiResponse = {
   data: [
     {
       id: 1,
-      name: "Infinite Jest",
+      name: "David Foster Wallace",
     },
   ],
 }
