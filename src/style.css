@@ -331,3 +331,7 @@ a:focus {
     list-style-position: inside;
   }
 }
+
+.operator {
+  background: none!important;
+}
