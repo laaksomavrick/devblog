@@ -105,19 +105,19 @@ type ApiResponseData<Type> = {
   [Property in keyof Type]: Type[Property]
 }
 
-type ApiResponse<Data> = {
+type ApiResponse<DataShape> = {
   status: number
   error: string | null
   warnings: string[] | null
-  data: Data
+  data: ApiResponseData<DataShape>
 }
 
 type Book = { id: number; title: string }
 type Author = { id: number; name: string }
 type Authors = Author[]
 
-type BookApiResponse = ApiResponse<ApiResponseData<Book>>
-type AuthorsApiResponse = ApiResponse<ApiResponseData<Author>[]>
+type BookApiResponse = ApiResponse<Book>
+type AuthorsApiResponse = ApiResponse<Author[]>
 
 const bookResponse: BookApiResponse = {
   status: 200,
