@@ -1,11 +1,11 @@
 {
-  "name": "gatsby-starter-blog",
+  "name": "technoblather",
   "private": true,
-  "description": "A starter for a blog powered by Gatsby and Markdown",
+  "description": "Personal blog for Mavrick Laakso",
   "version": "0.1.0",
-  "author": "Kyle Mathews <mathews.kyle@gmail.com>",
+  "author": "Mavrick Laakso <laakso.mavrick@gmail.com>",
   "bugs": {
-    "url": "https://github.com/gatsbyjs/gatsby/issues"
+    "url": "https://github.com/laaksomavrick/devblog"
   },
   "engines": {
     "node": "18"
@@ -33,14 +33,17 @@
   "devDependencies": {
     "prettier": "^2.8.1"
   },
-  "homepage": "https://github.com/gatsbyjs/gatsby-starter-blog#readme",
+  "homepage": "https://github.com/laaksomavrick/devblog",
   "keywords": [
-    "gatsby"
+    "gatsby",
+    "blog",
+    "aws",
+    "terraform"
   ],
-  "license": "0BSD",
+  "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gatsbyjs/gatsby-starter-blog.git"
+    "url": "git+https://github.com/laaksomavrick/devblog.git"
   },
   "scripts": {
     "build": "gatsby build",
