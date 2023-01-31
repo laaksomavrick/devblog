@@ -8,6 +8,7 @@ resource "aws_cloudwatch_metric_alarm" "blog_broken_alarm" {
   period              = "60"
   statistic           = "Average"
   threshold           = "1"
+  treat_missing_data  = "notBreaching"
 
   alarm_description = "Monitors whenever average error rate exceeds 1%"
   alarm_actions     = [aws_sns_topic.technoblather_sns_topic_500_error_threshold_exceeded.arn]
