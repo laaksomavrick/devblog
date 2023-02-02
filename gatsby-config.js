@@ -12,9 +12,9 @@ module.exports = {
     title: `technoblather`,
     author: {
       name: `Mavrick Laakso`,
-      summary: `When not developing software you can find him: around a campfire, walking his dog, or between the pages of a book.`,
+      summary: `Blogging learnings and thoughts on developing and operating software.`,
     },
-    description: `Technical blathering and whatever else comes to mind.`,
+    description: `Blogging learnings and thoughts on developing and operating software.`,
     siteUrl: `https://technoblather.ca`,
     social: {
       email: "laakso.mavrick@gmail.com",
