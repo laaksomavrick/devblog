@@ -16,7 +16,13 @@ This sounds great and is a lofty goal for any technical team to achieve. In the 
 
 And so, this brings us to our main point: I wanted a project to both crystallize some of what I learned via studying and test taking for the aforementioned certification and to engage in open learning via blogging as a public journal of my professional life. And so, with the intention of using AWS services and industry standard tooling, I made a blog.
 
-## what the goal is
+## Ok - so you made a blog
+
+Not just any blog though - but a _good blog_. But what does that mean? Well, blogs are meant to be read, and as such we'll want to optimize for SEO. From a technical perspective then, there are some properties to optimize for:
+* Performance: a blog should be really, really fast to deliver content.
+* Accessibility: a blog should be accessible to all users.
+* Trustable: a blog should encrypt traffic, not spam users, not engage in dark-pattern UI distractions, and so forth.
+* SEO: a blog should include all the metadata search engines expect and be crawlable to get higher search rankings. 
 
 ## tech we'll use
 
