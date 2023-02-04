@@ -1,14 +1,9 @@
 resource "aws_cloudfront_distribution" "www_s3_distribution" {
-  origin {
-    domain_name = aws_s3_bucket.www_bucket.website_endpoint
-    origin_id   = "S3-www.${var.bucket_name}"
 
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1", "TLSv1.1", "TLSv1.2"]
-    }
+  origin {
+    domain_name              = aws_s3_bucket.www_bucket.bucket_regional_domain_name
+    origin_access_control_id = aws_cloudfront_origin_access_control.www_s3_origin_access_control.id
+    origin_id                = "S3-www.${var.bucket_name}"
   }
 
   enabled             = true
@@ -59,17 +54,20 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
   tags = var.common_tags
 }
 
+resource "aws_cloudfront_origin_access_control" "www_s3_origin_access_control" {
+  name                              = "www-s3-origin-access-control"
+  description                       = ""
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
 # Cloudfront S3 for redirect to www.
 resource "aws_cloudfront_distribution" "root_s3_distribution" {
   origin {
-    domain_name = aws_s3_bucket.root_bucket.website_endpoint
-    origin_id   = "S3-.${var.bucket_name}"
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1", "TLSv1.1", "TLSv1.2"]
-    }
+    domain_name              = aws_s3_bucket.root_bucket.bucket_regional_domain_name
+    origin_access_control_id = aws_cloudfront_origin_access_control.root_s3_origin_access_control.id
+    origin_id                = "S3-.${var.bucket_name}"
   }
 
   enabled         = true
@@ -111,4 +109,13 @@ resource "aws_cloudfront_distribution" "root_s3_distribution" {
   }
 
   tags = var.common_tags
+}
+
+
+resource "aws_cloudfront_origin_access_control" "root_s3_origin_access_control" {
+  name                              = "root-s3-origin-access-control"
+  description                       = ""
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
 }

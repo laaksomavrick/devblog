@@ -5,7 +5,7 @@ resource "aws_s3_bucket" "www_bucket" {
 
 resource "aws_s3_bucket_acl" "blog_acl" {
   bucket = aws_s3_bucket.www_bucket.id
-  acl    = "public-read"
+  acl    = "private"
 }
 
 resource "aws_s3_bucket_versioning" "blog_versioning" {
@@ -29,7 +29,7 @@ resource "aws_s3_bucket_website_configuration" "blog_website_configuration" {
 
 resource "aws_s3_bucket_policy" "blog_policy" {
   bucket = aws_s3_bucket.www_bucket.id
-  policy = templatefile("templates/s3-policy.json", { bucket = "www.${var.bucket_name}" })
+  policy = templatefile("templates/s3-policy.json", { bucket = "www.${var.bucket_name}", cloudfront_arn = aws_cloudfront_distribution.www_s3_distribution.arn })
 }
 
 resource "aws_s3_bucket_cors_configuration" "blog_cors_configuration" {

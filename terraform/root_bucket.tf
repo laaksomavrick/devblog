@@ -5,12 +5,12 @@ resource "aws_s3_bucket" "root_bucket" {
 
 resource "aws_s3_bucket_policy" "root_blog_policy" {
   bucket = aws_s3_bucket.root_bucket.id
-  policy = templatefile("templates/s3-policy.json", { bucket = var.bucket_name })
+  policy = templatefile("templates/s3-policy.json", { bucket = var.bucket_name, cloudfront_arn = aws_cloudfront_distribution.root_s3_distribution.arn })
 }
 
 resource "aws_s3_bucket_acl" "root_acl" {
   bucket = aws_s3_bucket.root_bucket.id
-  acl    = "public-read"
+  acl    = "private"
 }
 
 resource "aws_s3_bucket_website_configuration" "root_blog_website_configuration" {
