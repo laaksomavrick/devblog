@@ -1,12 +1,12 @@
 ---
 title: Building the World's Most Complicated Blog
 date: "2023-02-02T00:00:00.000Z"
-description: Or, learn how to deploy and monitor a static website in AWS with Cloudfront and S3.
+description: Or, my experience deploying and operating a static website in AWS with Cloudfront and S3.
 ---
 
 ## What is this and why am I here?
 
-First and foremost: I'll skip any references to ontology with a title like that.
+First and foremost: I'll skip any references to ontology with a subtitle like that.
 
 If you've ever worked with me, you've likely listened to me whinge about our (developers) lack of conscientiousness towards how the software we develop is operated. Are the logs any good? Do we expose any metrics? Is the code performant under load? And so forth. Anecdotally, most companies that employ developers make it someone else's problem to deal with whatever the developers produce. Obviously that means we generally do a terrible job of it, and we ought not as an expression of our professional practice.
 
@@ -18,31 +18,44 @@ And so, this brings us to our main point: I wanted a project to both crystallize
 
 ## Ok - so you made a blog
 
-Not just any blog though - but a _good blog_. But what does that mean? Well, blogs are meant to be read, and as such we'll want to optimize for SEO. From a technical perspective then, there are some properties to optimize for:
+Not just any blog though - but a _good blog_. But what does that mean? Well, blogs are meant to be read, and as such we'll want to optimize for SEO. From a technical perspective then, we should prioritize solutions that consider:
+
 * Performance: a blog should be really, really fast to deliver content.
 * Accessibility: a blog should be accessible to all users.
 * Trustable: a blog should encrypt traffic, not spam users, not engage in dark-pattern UI distractions, and so forth.
-* SEO: a blog should include all the metadata search engines expect and be crawlable to get higher search rankings. 
+* Machine-crawlability: a blog should include all the metadata search engines expect and be crawlable to get higher search rankings. 
 
-## tech we'll use
+Furthermore, I wanted to utilize "best practices" from a DevOps perspective with my technical decisions. And so, to facilitate this: 
 
-For the blog itself, I opted to use [Gatsby](https://www.gatsbyjs.com/). Architecting the blog as static content means it's easy to cache and removes the need for any server side infrastructure.
+* For the blog engine, I chose [Gatsby](https://www.gatsbyjs.com/). Architecting the blog as static content means it's easy to cache and removes the need for any server side infrastructure.
+* For operating the blog, I chose [AWS](https://aws.amazon.com/). This is the industry standard for operating services in the cloud. 
+* For configuring the infrastructure, I chose [Terraform](https://www.terraform.io/) as an infrastructure-as-code solution. Likewise, the industry standard IaC solution.
+* To deploy the blog, I opted to use [Github Actions](https://github.com/features/actions) to set up continuous integration and deployment pipelines. Github is being used for version control already and actions integrates with this well. 
 
-To orchestrate setting up the infrastructure, I opted to use [Terraform]() as an infrastructure-as-code solution.
+You can find all code referenced in [this github repository](https://github.com/laaksomavrick/devblog).
 
-In AWS, a few services are used to build the blog's infrastructure and to operate it:
-* IAM
-* Route53
-* Certificate Manager
-* Cloudfront
-* S3
-* SNS
-* Cloudwatch
+## High level technoblather
 
-To deploy the blog, I opted to use [Github Actions]() to set up continuous integration and deployment pipelines.
+Before delving into the details of the terraform declarations, I'd like to give an overview of the services used and how they relate to one another:
 
-## before we begin
+* IAM for defining groups and policies to operate the solution
+* Route53 for DNS management
+* Certificate Manager for provisioning an SSL certificate
+* Cloudfront for distributing and caching the blog
+* S3 for storing terraform state and blog content
+* SNS for publishing events related to operating the blog
+* Cloudwatch for acting on events (e.g., alerting)
 
-## dissecting the terraform/infra diagram (point out gotchas)
+Visualized, this looks like:
+
+![technoblather's infrastructure diagram](architecture.png)
+
+## The details
+
+### before we begin (iam, account setup)
+
+### dissecting the terraform (point out gotchas/what you did/why - start from front and go deep)
+
+### dissecting the CI
 
 ## things to do next
