@@ -14,11 +14,11 @@ People smarter than myself have identified this as a problem (and you can probab
 
 This sounds great and is a lofty goal for any technical team to achieve. In the pursuit of developing the capability to walk-the-talk, I recently attained a [Solutions Architect – Associate](https://www.credly.com/badges/e056b75f-16ea-4d6d-8f70-b971fb067c59/public_url) certification with Amazon and have an eye towards attaining the [DevOps Engineer - Professional](https://aws.amazon.com/certification/certified-devops-engineer-professional/) certification this year.  
 
-And so, this brings us to our main point: I wanted a project to both crystallize some of what I learned via studying and test taking for the aforementioned certification and to engage in open learning via blogging as a public journal of my professional life. And so, with the intention of using AWS services and industry standard tooling, I made a blog.
+And so, this brings us to our main point: I wanted a project to both crystallize some of what I learned via studying and test taking for the aforementioned certification and to engage in open learning via blogging as a public journal of my professional development. And so, with the intention of using AWS services and industry standard tooling, I made a blog.
 
 ## Ok - so you made a blog
 
-Not just any blog though - but a _good blog_. But what does that mean? Well, blogs are meant to be read, and as such we'll want to optimize for SEO. From a technical perspective then, we should prioritize solutions that consider:
+Not just any blog though - a _good blog_. But what does that mean? Blogs are meant to be read, and as such we'll want to optimize for SEO. From a technical perspective then, we should prioritize solutions that consider:
 
 * Performance: a blog should be really, really fast to deliver content.
 * Accessibility: a blog should be accessible to all users.
@@ -32,7 +32,6 @@ Furthermore, I wanted to utilize "best practices" from a DevOps perspective with
 * For configuring the infrastructure, I chose [Terraform](https://www.terraform.io/) as an infrastructure-as-code solution. Likewise, the industry standard IaC solution.
 * To deploy the blog, I opted to use [Github Actions](https://github.com/features/actions) to set up continuous integration and deployment pipelines. Github is being used for version control already and actions integrates with this well. 
 
-You can find all code referenced in [this github repository](https://github.com/laaksomavrick/devblog).
 
 ## High level technoblather
 
@@ -46,16 +45,41 @@ Before delving into the details of the terraform declarations, I'd like to give 
 * SNS for publishing events related to operating the blog
 * Cloudwatch for acting on events (e.g., alerting)
 
+This will look familiar if you've ever hosted a static website via S3. Everything detailed in this blog post could just as well be applied to a single page application, e.g. a React app.
+
 Visualized, this looks like:
 
 ![technoblather's infrastructure diagram](architecture.png)
 
 ## The details
 
-### before we begin (iam, account setup)
+Now, let's get into the details. We'll begin with explaining the IAM user administering this account, moving onto the services used from the front to the back of web traffic, ending with a brief overview of how the pipelines are set up. You can find all code referenced in [this github repository](https://github.com/laaksomavrick/devblog).
 
-### dissecting the terraform (point out gotchas/what you did/why - start from front and go deep)
+### Creating an IAM user for the project
 
-### dissecting the CI
+You should never use your root account for provisioning resources for a project and instead embrace applying least-privilege permissions [[2]](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html) to an IAM user, group, or role. For this project, I opted to create a separate IAM user with the following default policies attached from my `AdministratorAccess` account. 
 
-## things to do next
+* AmazonS3FullAccess
+* CloudWatchFullAccess
+* CloudFrontFullAccess
+* AmazonSNSFullAccess
+* AmazonRoute53FullAccess
+* AWSCertificateManagerFullAccess
+
+This isn't in the terraform declarations because I needed it prior to writing the terraform declarations (i.e., while I was figuring out how to do all this). In other words, a typical chicken-and-egg problem. In retrospect, I could have used a `AdministratorAccess` designated account to create this IAM user via terraform and then assume the created IAM user for all subsequent commands. But, this was still the experimental stage.
+
+### Authoring the infrastructure (point out gotchas/what you did/why - start from front and go deep)
+
+#### Route53 and Certificate Manager
+
+#### Cloudfront
+
+#### S3
+
+#### Cloudwatch Alarms and SNS
+
+### Authoring the CI/CD pipeline
+
+## So, what's next?
+
+setting up logging, setting up DDoS protection, setting up a staging environment, setting up a budget, more monitoring, ???
