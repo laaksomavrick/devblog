@@ -57,7 +57,7 @@ Now, let's get into the details. We'll begin with explaining the IAM user admini
 
 ### Creating an IAM user for the project
 
-You should never use your root account for provisioning resources for a project and instead embrace applying least-privilege permissions [[2]](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html) to an IAM user, group, or role. For this project, I opted to create a separate IAM user with the following default policies attached from my `AdministratorAccess` account. 
+You should never use your root account for provisioning resources for a project and instead embrace applying least-privilege permissions  to an IAM user, group, or role [[2]](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html). For this project, I opted to create a separate IAM user with the following amazon managed policies attached from my `AdministratorAccess` account. 
 
 * AmazonS3FullAccess
 * CloudWatchFullAccess
@@ -70,7 +70,164 @@ This isn't in the terraform declarations because I needed it prior to writing th
 
 ### Authoring the infrastructure (point out gotchas/what you did/why - start from front and go deep)
 
+Prepare yourself for lots of [HCL](https://developer.hashicorp.com/terraform/language/syntax/configuration).
+
+We'll start with the module entry point (`main.tf`), my provider declarations (`aws.tf`), and my terraform variables (`variables.tf`)
+
+```terraform
+# main.tf
+
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.16"
+    }
+  }
+
+  backend "s3" {
+    bucket = "technoblather-terraform"
+    key    = "tfstate"
+    region = "ca-central-1"
+  }
+
+  required_version = ">= 1.2.0"
+}
+```
+
+I opted to use `ca-central-1` everywhere I could since I live nowhere close to Toronto. You'll see shortly that this led to a few gotchas related to certificate management and Cloudfront.
+
+```terraform
+# aws.tf
+
+provider "aws" {
+  region                   = "ca-central-1"
+  shared_credentials_files = ["~/.aws/credentials"]
+  profile                  = "technoblather"
+}
+
+provider "aws" {
+  alias  = "acm_provider"
+  region = "us-east-1"
+}
+```
+
+Aforementioned solution to the gotchas - the latter aws provider block specifies `us-east-1` for services that aren't operable outside that region [[3]](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cnames-and-https-requirements.html). Basically, you need to use `us-east-1` to set up SSL with Cloudfront.
+
+```terraform
+# variables.tf
+
+variable "domain_name" {
+  type        = string
+  description = "The domain name for the website."
+}
+
+variable "bucket_name" {
+  type        = string
+  description = "The name of the bucket without the www. prefix. Normally domain_name."
+}
+
+variable "common_tags" {
+  description = "Common tags you want applied to all components."
+}
+
+variable "alert_emails" {
+  type        = list(string)
+  description = "A list of emails for alerting via cloudwatch alarms."
+}
+```
+
+No surprises here. One good practice I adopted was issuing a uniform set of tags for each resource since it made winnowing down billing for this project easier, e.g.:
+
+```terraform
+common_tags = {
+  Project = "technoblather"
+}
+```
+
+
 #### Route53 and Certificate Manager
+
+Moving onto DNS. The vast majority of my career has been in development, so DNS and SSL are one of those things I've skimmed a how-to as little as possible and moved on. Trying to make amends here - I have a few hobby projects I operate now (sole user) and know the difference between an `A` record and a `CNAME`. Also smart enough to delegate certificate renewal to an automated process or a service.  
+
+```terraform
+# route53.tf
+
+resource "aws_route53_zone" "main" {
+  name = var.domain_name
+  tags = var.common_tags
+}
+
+resource "aws_route53_record" "root-a" {
+  zone_id = aws_route53_zone.main.zone_id
+  name    = var.domain_name
+  type    = "A"
+
+  alias {
+    name                   = aws_cloudfront_distribution.root_s3_distribution.domain_name
+    zone_id                = aws_cloudfront_distribution.root_s3_distribution.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "www-a" {
+  zone_id = aws_route53_zone.main.zone_id
+  name    = "www.${var.domain_name}"
+  type    = "A"
+
+  alias {
+    name                   = aws_cloudfront_distribution.www_s3_distribution.domain_name
+    zone_id                = aws_cloudfront_distribution.www_s3_distribution.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "main" {
+  for_each = {
+    for dvo in aws_acm_certificate.ssl_certificate.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = aws_route53_zone.main.zone_id
+}
+```
+
+Here, we have two declarations for `A` records (`www.technoblather.ca` and `technoblather.ca`) which lets Route53 handle requests for our domain and traffic them to the appropriate service (Cloudfront).
+
+You'll notice a recurring duplication between a `www` resource and a `root` resource as we proceed down the service stack. This is because I needed two buckets in order to handle url redirection [[4]](https://docs.aws.amazon.com/AmazonS3/latest/userguide/how-to-page-redirect.html#redirect-endpoint-host). I didn't want a request to `technoblather.ca` to result in a `404`, so `root` functions as a redirect to my `www` bucket.
+
+
+```terraform
+# acm.tf
+
+resource "aws_acm_certificate" "ssl_certificate" {
+  provider                  = aws.acm_provider
+  domain_name               = var.domain_name
+  subject_alternative_names = ["*.${var.domain_name}"]
+  validation_method         = "DNS"
+
+  tags = var.common_tags
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_acm_certificate_validation" "cert_validation" {
+  provider                = aws.acm_provider
+  certificate_arn         = aws_acm_certificate.ssl_certificate.arn
+  validation_record_fqdns = [for record in aws_route53_record.main : record.fqdn]
+}
+```
+
+Here we're setting up SSL for our domain name. This is almost verbatim copied from [the terraform documentation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/acm_certificate_validation). Setting up DNS validation is recommended and was easier than trying to register a mail server for my domain.
 
 #### Cloudfront
 
