@@ -109,7 +109,7 @@ Prepare yourself for lots of [HCL](https://developer.hashicorp.com/terraform/lan
 We'll start with the module entry point (`main.tf`), my provider declarations (`aws.tf`), and my terraform
 variables (`variables.tf`)
 
-```terraform
+```hcl
 # main.tf
 
 terraform {
@@ -133,7 +133,7 @@ terraform {
 I opted to use `ca-central-1` everywhere I could since I live nowhere close to Toronto. You'll see shortly that this led
 to a few gotchas related to certificate management and Cloudfront.
 
-```terraform
+```hcl
 # aws.tf
 
 provider "aws" {
@@ -153,7 +153,7 @@ operable outside that
 region [[3]](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cnames-and-https-requirements.html).
 Basically, you need to use `us-east-1` to set up SSL with Cloudfront.
 
-```terraform
+```hcl
 # variables.tf
 
 variable "domain_name" {
@@ -179,7 +179,7 @@ variable "alert_emails" {
 No surprises here. One good practice I adopted was issuing a uniform set of tags for each resource since it made
 winnowing down billing for this project easier, e.g.:
 
-```terraform
+```hcl
 common_tags = {
   Project = "technoblather"
 }
@@ -192,7 +192,7 @@ skimmed a how-to as little as possible and moved on. Trying to make amends here 
 now (sole user) and know the difference between an `A` record and a `CNAME`. Also smart enough to delegate certificate
 renewal to an automated process or a service.
 
-```terraform
+```hcl
 # route53.tf
 
 resource "aws_route53_zone" "main" {
@@ -250,7 +250,7 @@ redirection [[4]](https://docs.aws.amazon.com/AmazonS3/latest/userguide/how-to-p
 . I didn't want a request to `technoblather.ca` to result in a `404`, so `root` functions as a redirect to my `www`
 bucket.
 
-```terraform
+```hcl
 # acm.tf
 
 resource "aws_acm_certificate" "ssl_certificate" {
@@ -286,7 +286,7 @@ content of our blog through a distribution, specifying the origin (S3), security
 geographic restrictions, and caching
 behaviours [[5]](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-overview.html)
 
-```terraform
+```hcl
 # cloudfront.tf
 
 resource "aws_cloudfront_distribution" "www_s3_distribution" {
@@ -430,7 +430,7 @@ Blog content is hosted in S3. One bucket contains the build output from Gatsby, 
 aforementioned bucket. Of note, these buckets are private and only accessible to our specified Cloudfront distribution.
 Versioning is also enabled in case of any oopses.
 
-```terraform
+```hcl
 # www_bucket.tf
 
 resource "aws_s3_bucket" "www_bucket" {
@@ -481,7 +481,7 @@ resource "aws_s3_bucket_cors_configuration" "blog_cors_configuration" {
 }
 ```
 
-```terraform
+```hcl
 # root_bucket.tf
 
 resource "aws_s3_bucket" "root_bucket" {
@@ -511,7 +511,7 @@ resource "aws_s3_bucket_website_configuration" "root_blog_website_configuration"
 ```
 
 ```json
-# s3-policy.json
+// s3-policy.json
         
 {
   "Version": "2012-10-17",
@@ -538,7 +538,7 @@ resource "aws_s3_bucket_website_configuration" "root_blog_website_configuration"
 In the interest of improving my capabilities around operating software, I wanted to make sure I had some form of monitoring and alerting in place. Cloudfront publishes some metrics by default which can be consumed by Cloudwatch [[6]](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/monitoring-using-cloudwatch.html). So, I figured I should send myself an email if my blog ever begins returning a `500` error (i.e., something unexpected has gone wrong and my content is no longer online).
 
 
-```terraform
+```hcl
 # cloudwatch.tf
 
 resource "aws_cloudwatch_metric_alarm" "blog_broken_alarm" {
@@ -565,7 +565,7 @@ resource "aws_cloudwatch_metric_alarm" "blog_broken_alarm" {
 }
 ```
 
-```terraform
+```hcl
 # sns.tf
 
 resource "aws_sns_topic" "technoblather_sns_topic_500_error_threshold_exceeded" {
@@ -650,7 +650,6 @@ jobs:
 
       - name: Terraform fmt
         run: terraform fmt -check
-        continue-on-error: true
 
       - name: Terraform Validate
         run: terraform validate -no-color
