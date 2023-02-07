@@ -535,6 +535,77 @@ resource "aws_s3_bucket_website_configuration" "root_blog_website_configuration"
 
 #### Cloudwatch Alarms and SNS
 
+In the interest of improving my capabilities around operating software, I wanted to make sure I had some form of monitoring and alerting in place. Cloudfront publishes some metrics by default which can be consumed by Cloudwatch [[6]](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/monitoring-using-cloudwatch.html). So, I figured I should send myself an email if my blog ever begins returning a `500` error (i.e., something unexpected has gone wrong and my content is no longer online).
+
+
+```terraform
+# cloudwatch.tf
+
+resource "aws_cloudwatch_metric_alarm" "blog_broken_alarm" {
+  provider            = aws.acm_provider
+  alarm_name          = "blog-broken-alarm"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "1"
+  metric_name         = "5xxErrorRate"
+  namespace           = "AWS/CloudFront"
+  period              = "60"
+  statistic           = "Average"
+  threshold           = "1"
+  treat_missing_data  = "notBreaching"
+
+  alarm_description = "Monitors whenever average error rate exceeds 1%"
+  alarm_actions     = [aws_sns_topic.technoblather_sns_topic_500_error_threshold_exceeded.arn]
+
+  dimensions = {
+    DistributionId = aws_cloudfront_distribution.www_s3_distribution.id
+    Region         = "Global"
+  }
+
+  tags = var.common_tags
+}
+```
+
+```terraform
+# sns.tf
+
+resource "aws_sns_topic" "technoblather_sns_topic_500_error_threshold_exceeded" {
+  provider = aws.acm_provider
+  name     = "technoblather-500-error-threshold-exceeded"
+  delivery_policy = jsonencode({
+    "http" : {
+      "defaultHealthyRetryPolicy" : {
+        "minDelayTarget" : 20,
+        "maxDelayTarget" : 20,
+        "numRetries" : 3,
+        "numMaxDelayRetries" : 0,
+        "numNoDelayRetries" : 0,
+        "numMinDelayRetries" : 0,
+        "backoffFunction" : "linear"
+      },
+      "disableSubscriptionOverrides" : false,
+      "defaultThrottlePolicy" : {
+        "maxReceivesPerSecond" : 1
+      }
+    }
+  })
+  tags = var.common_tags
+}
+
+resource "aws_sns_topic_subscription" "technoblather_sns_topic_500_error_threshold_exceeded_email_subscription" {
+  provider  = aws.acm_provider
+  count     = length(var.alert_emails)
+  topic_arn = aws_sns_topic.technoblather_sns_topic_500_error_threshold_exceeded.arn
+  protocol  = "email"
+  endpoint  = var.alert_emails[count.index]
+}
+```
+
+The `5xxErrorRate` metric triggers an alarm if the _average threshold of errors is >= 1 within a minute_. In plain language, if it ever happens, I'll get an alarm. One gotcha I had while setting this up was configuring the `treat_missing_data` to explicitly be `notBreaching`. This means no data being returned will be an `OK` instead of an `INSUFFICIENT_DATA`. In our case, no data is a good thing.
+
+The alarm triggers an event to be published to an SNS topic. That topic has a subscription resulting in an email being triggered as a result.
+
+So, whenever a `5xx` happens from a request to the blog, the `alert_emails` get an email. I was able to test this using the [set-alarm-state](https://docs.aws.amazon.com/cli/latest/reference/cloudwatch/set-alarm-state.html) command from the `aws` cli.
+
 #### Authoring the CI/CD pipeline
 
 ## So, what's next?
