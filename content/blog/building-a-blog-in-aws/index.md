@@ -608,6 +608,104 @@ So, whenever a `5xx` happens from a request to the blog, the `alert_emails` get 
 
 #### Authoring the CI/CD pipeline
 
+Here things became more familiar for me. There are two processes I wanted to automate:
+* Verifying the changes we're pushing on a pull request are standardized
+* Deploying the changes when they've been merged
+
+For the first, we run formatters and check that gatsby can build without throwing an error.
+
+For the latter, we build an output artifact via Gatsby, sync it to S3, and invalidate our Cloudformation distribution to break the cache.
+
+```yml
+# verify_pull_request.yml
+
+name: Verify pull request
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Setup terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.1.7
+
+      - name: Install node dependencies
+        run: npm ci
+
+      - name: Prettier fmt
+        run: npm run format:check
+
+      - name: Terraform fmt
+        run: terraform fmt -check
+        continue-on-error: true
+
+      - name: Terraform Validate
+        run: terraform validate -no-color
+
+      - name: Gatsby build
+        run: npm run build
+```
+
+```yml
+# deploy_to_s3.yml
+
+name: Deploy to s3 and refresh cloudfront
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy-to-s3:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install node dependencies
+        run: npm ci
+
+      - name: Build production artifact
+        run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ vars.RUNNER_AWS_ROLE_ID }}
+          aws-region: ca-central-1
+
+      - name: Deploy technoblather to S3
+        run: |
+          aws s3 sync public ${{ vars.BUCKET_ID }}
+
+      - name: Invalidate Cloudfront cache
+        run: |
+          aws cloudfront create-invalidation --distribution-id ${{ vars.CLOUDFRONT_ID }} --paths "/*";
+```
+
+Notably, the AWS secret and environment variables are plumbed through Github's repository settings. I did have to set up an OIDC provider as per AWS's Github Action documentation [[7]](https://github.com/aws-actions/configure-aws-credentials#assuming-a-role) to facilitate this in a secure way. 
+
 ## So, what's next?
 
 setting up logging, setting up DDoS protection, setting up a staging environment, setting up a budget, more monitoring,
