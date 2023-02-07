@@ -77,7 +77,7 @@ Visualized, this looks like:
 
 ![technoblather's infrastructure diagram](architecture.png)
 
-## The details
+## Getting into the nitty-gritty
 
 Now, let's get into the details. We'll begin with explaining the IAM user administering this account, moving onto the
 services used from the front to the back of web traffic, ending with a brief overview of how the pipelines are set up.
@@ -102,7 +102,7 @@ was figuring out how to do all this). In other words, a typical chicken-and-egg 
 used a `AdministratorAccess` designated account to create this IAM user via terraform and then assume the created IAM
 user for all subsequent commands. But, this was still the experimental stage.
 
-### Authoring the infrastructure (point out gotchas/what you did/why - start from front and go deep)
+### Authoring the infrastructure
 
 Prepare yourself for lots of [HCL](https://developer.hashicorp.com/terraform/language/syntax/configuration).
 
@@ -417,12 +417,12 @@ Of note here: our origin is our S3 bucket, our root object is `index.html`, we r
 specifying an `aws_cloudfront_origin_access_control` such that only cloudfront can access it, we enforce SSL, and we set
 up our cache properties (TTL, compression).
 
-So, this means that all requests must be routed through cloudfront - accessing our public via the bucket url will be
-rejected. HTTP requests will be redirected to https. Content is cached for as long as possible - the only time we want
+So, this means that all requests must be routed through cloudfront - accessing our bucket via the bucket url will result in a
+rejected request. HTTP requests will be redirected to https. Content is cached for as long as possible - the only time we want
 the cache to be invalidated is upon a new deployment (you'll see later that our CI/CD pipeline invalidates the
 distribution when deploying changes).
 
-Via Google's Lighthouse tool, this configuration was evaluated with a 100/100 for performance. Not too shabby!
+Via Google's Lighthouse tool, this configuration was evaluated with a 100/100 for performance. Not too shabby.
 
 #### S3
 
@@ -535,9 +535,13 @@ resource "aws_s3_bucket_website_configuration" "root_blog_website_configuration"
 
 #### Cloudwatch Alarms and SNS
 
-### Authoring the CI/CD pipeline
+#### Authoring the CI/CD pipeline
 
 ## So, what's next?
 
 setting up logging, setting up DDoS protection, setting up a staging environment, setting up a budget, more monitoring,
 ???
+
+## Conclusion
+
+Did this blog meet my goals? Aforementioned criteria, learning things, new tool for engaging with the developer community and promotion of open learning? 
