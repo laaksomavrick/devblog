@@ -708,8 +708,16 @@ Notably, the AWS secret and environment variables are plumbed through Github's r
 
 ## So, what's next?
 
-setting up logging, setting up DDoS protection, setting up a staging environment, setting up a budget, more monitoring,
-???
+We covered a large quantity of information scrolling through the 2000 and some words to this point. There are a number of next steps I have planned with the intention of validating more of my knowledge (and simply learning new things). While not exhaustive, next steps (for your own blog, perhaps) could be:
+* Setting up request logging in Cloudfront
+* Creating more alarms for metrics published to Cloudwatch (e.g. p99 latency, cache misses)
+* Setting up DDoS protection with AWS WAF and/or AWS Shield
+* Setting up a staging environment to validate changes before deploying to production
+* Setting up a budget via AWS Budgets
+
+...and more I can't even think of.
+
+I'll likely write some more posts on these topics as I make my way through them alongside my other hobby projects. Notably, I operate a [weightlifting application](https://hugelifts.ca/) and a [goal tracking application](https://ownyourday.ca/). Sign ups for both are disabled (aside from my partner who graciously humours me) as I don't want to support users (yet).
 
 ## Conclusion
 
