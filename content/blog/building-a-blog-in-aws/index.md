@@ -1,6 +1,6 @@
 ---
 title: Building Technoblather
-date: "2023-02-02T00:00:00.000Z"
+date: "2023-08-02T00:00:00.000Z"
 description: Or, my experience deploying and operating a static website in AWS with Cloudfront and S3.
 ---
 
@@ -420,7 +420,11 @@ rejected request. HTTP requests will be redirected to HTTPS. Content is cached f
 the cache to be invalidated is when a new deployment occurs (you'll see later that the CI/CD pipeline invalidates the
 distribution when deploying changes).
 
-Via Google's Lighthouse tool, this configuration was evaluated with a 100/100 for performance. Not too shabby.
+Via Google's Lighthouse tool, this configuration was evaluated with a 100/100 for performance.
+
+![technoblather's lighthouse score](lighthouse.png)
+
+Not too shabby.
 
 #### S3
 
