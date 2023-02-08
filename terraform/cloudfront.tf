@@ -32,6 +32,12 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
       }
     }
 
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.www_add_index.arn
+    }
+
     viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 31536000
     default_ttl            = 31536000
@@ -62,11 +68,18 @@ resource "aws_cloudfront_origin_access_control" "www_s3_origin_access_control" {
   signing_protocol                  = "sigv4"
 }
 
+resource "aws_cloudfront_function" "www_add_index" {
+  name    = "www_add_index"
+  runtime = "cloudfront-js-1.0"
+  comment = "my function"
+  publish = true
+  code    = file("functions/wwwAddIndex.js")
+}
+
 # Cloudfront S3 for redirect to www.
 resource "aws_cloudfront_distribution" "root_s3_distribution" {
   origin {
     domain_name              = aws_s3_bucket.root_bucket.bucket_regional_domain_name
-    origin_access_control_id = aws_cloudfront_origin_access_control.root_s3_origin_access_control.id
     origin_id                = "S3-.${var.bucket_name}"
   }
 
@@ -109,13 +122,4 @@ resource "aws_cloudfront_distribution" "root_s3_distribution" {
   }
 
   tags = var.common_tags
-}
-
-
-resource "aws_cloudfront_origin_access_control" "root_s3_origin_access_control" {
-  name                              = "root-s3-origin-access-control"
-  description                       = ""
-  origin_access_control_origin_type = "s3"
-  signing_behavior                  = "always"
-  signing_protocol                  = "sigv4"
 }

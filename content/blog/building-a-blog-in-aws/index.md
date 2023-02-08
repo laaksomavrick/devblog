@@ -411,6 +411,26 @@ resource "aws_cloudfront_origin_access_control" "root_s3_origin_access_control" 
 
 ```
 
+```javascript
+/// wwwAddIndex.js
+
+function handler(event) {
+  var request = event.request;
+  var uri = request.uri;
+
+  // Check whether the URI is missing a file name.
+  if (uri.endsWith('/')) {
+    request.uri += 'index.html';
+  }
+  // Check whether the URI is missing a file extension.
+  else if (!uri.includes('.')) {
+    request.uri += '/index.html';
+  }
+
+  return request;
+}
+```
+
 Of note here: the origin is our S3 bucket, our root object is `index.html`, we restrict access to the S3 bucket by
 specifying an `aws_cloudfront_origin_access_control` such that only Cloudfront can access it, we enforce SSL, and we set
 up the cache properties (TTL, compression).
@@ -419,6 +439,12 @@ So, this means that all requests must be routed through Cloudfront - accessing t
 rejected request. HTTP requests will be redirected to HTTPS. Content is cached for as long as possible - the only time we want
 the cache to be invalidated is when a new deployment occurs (you'll see later that the CI/CD pipeline invalidates the
 distribution when deploying changes).
+
+Note the differences between the `www` distribution and the `root` distribution. The `www` will be serving our content whereas the `root` serves as a redirect to the `www`.
+
+A major "gotcha" was figuring out how to handle requests to a private bucket for files and directories that _weren't_ the `index.html` (i.e., the blog root). I ended up having to utilize a [Cloudfront Function to rewrite requests for url paths](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/example-function-add-index.html), appending an `index.html` to the end of them.
+
+So, `www.technoblather.ca/some-blog-post` becomes `www.technoblather.ca/some-blog-post/index.html` behind the scenes, matching Gatsby's output build structure (and what's hosted in S3 as a result).
 
 Via Google's Lighthouse tool, this configuration was evaluated with a 100/100 for performance.
 
@@ -466,7 +492,7 @@ resource "aws_s3_bucket_website_configuration" "blog_website_configuration" {
 
 resource "aws_s3_bucket_policy" "blog_policy" {
   bucket = aws_s3_bucket.www_bucket.id
-  policy = templatefile("templates/s3-policy.json", {
+  policy = templatefile("templates/s3-private-policy.json", {
     bucket = "www.${var.bucket_name}", cloudfront_arn = aws_cloudfront_distribution.www_s3_distribution.arn
   })
 }
@@ -493,7 +519,7 @@ resource "aws_s3_bucket" "root_bucket" {
 
 resource "aws_s3_bucket_policy" "root_blog_policy" {
   bucket = aws_s3_bucket.root_bucket.id
-  policy = templatefile("templates/s3-policy.json", {
+  policy = templatefile("templates/s3-private-policy.json", {
     bucket = var.bucket_name, cloudfront_arn = aws_cloudfront_distribution.root_s3_distribution.arn
   })
 }
@@ -513,7 +539,7 @@ resource "aws_s3_bucket_website_configuration" "root_blog_website_configuration"
 ```
 
 ```json
-// s3-policy.json
+// s3-private-policy.json
 
 {
   "Version": "2012-10-17",
