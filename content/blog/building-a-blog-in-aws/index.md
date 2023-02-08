@@ -1,5 +1,5 @@
 ---
-title: Building the World's Most Complicated Blog
+title: Building Technoblather
 date: "2023-02-02T00:00:00.000Z"
 description: Or, my experience deploying and operating a static website in AWS with Cloudfront and S3.
 ---
@@ -18,19 +18,19 @@ People smarter than myself have identified this as a problem (and you can probab
 identification has given rise to a new approach regarding software development team practices
 called [DevOps](https://en.wikipedia.org/wiki/DevOps). Ignore the fact that colloquially DevOps has become a catch-all
 aggregate job role for operations, system administration, platform development, cloud development, and whatever you call
-writing pipelines (yaml configurator?). Ideally, a team practicing this methodology will have engineers work across the
+writing pipelines (yaml configurator?). Ideally, a team practicing this methodology will have developers work across the
 entire application lifecycle, from development and test to deployment to operations, and develop a range of skills not
 limited to a single function [[1]](https://aws.amazon.com/devops/what-is-devops/).
 
-This sounds great and is a lofty goal for any technical team to achieve. In the pursuit of developing the capability to
+Panacea! This sounds great and is a lofty goal for any technical team to achieve. In pursuit of developing the capability to
 walk-the-talk, I recently attained
 a [Solutions Architect – Associate](https://www.credly.com/badges/e056b75f-16ea-4d6d-8f70-b971fb067c59/public_url)
 certification with Amazon and have an eye towards attaining
 the [DevOps Engineer - Professional](https://aws.amazon.com/certification/certified-devops-engineer-professional/)
 certification this year.
 
-And so, this brings us to our main point: I wanted a project to both crystallize some of what I learned via studying and
-test taking for the aforementioned certification and to engage in open learning via blogging as a public journal of my
+And so, this brings us to our main topic: I wanted a project to both crystallize some of what I learned via studying and
+test taking for the aforementioned certification, and to engage in open learning via blogging as a public journal of my
 professional development. And so, with the intention of using AWS services and industry standard tooling, I made a blog.
 
 ## Ok - so you made a blog
@@ -38,37 +38,36 @@ professional development. And so, with the intention of using AWS services and i
 Not just any blog though - a _good blog_. But what does that mean? Blogs are meant to be read, and as such we'll want to
 optimize for SEO. From a technical perspective then, we should prioritize solutions that consider:
 
-* Performance: a blog should be really, really fast to deliver content.
-* Accessibility: a blog should be accessible to all users.
-* Trustable: a blog should encrypt traffic, not spam users, not engage in dark-pattern UI distractions, and so forth.
-* Machine-crawlability: a blog should include all the metadata search engines expect and be crawlable to get higher
+- Performance: a blog should be really, really fast to deliver content.
+- Accessibility: a blog should be accessible to all users and should be highly available.
+- Trustable: a blog should encrypt traffic, not spam users, not engage in dark-pattern UI distractions, and so on.
+- Machine-crawlability: a blog should include all the metadata search engines expect and be crawlable to get higher
   search rankings.
 
 Furthermore, I wanted to utilize "best practices" from a DevOps perspective with my technical decisions. And so, to
 facilitate this:
 
-* For the blog engine, I chose [Gatsby](https://www.gatsbyjs.com/). Architecting the blog as static content means it's
+- For the blog engine, I chose [Gatsby](https://www.gatsbyjs.com/). Architecting the blog as static content means it's
   easy to cache and removes the need for any server side infrastructure.
-* For operating the blog, I chose [AWS](https://aws.amazon.com/). This is the industry standard for operating services
+- For operating the blog, I chose [AWS](https://aws.amazon.com/). This is the industry standard for operating services
   in the cloud.
-* For configuring the infrastructure, I chose [Terraform](https://www.terraform.io/) as an infrastructure-as-code
+- For configuring the infrastructure, I chose [Terraform](https://www.terraform.io/) as an infrastructure-as-code
   solution. Likewise, the industry standard IaC solution.
-* To deploy the blog, I opted to use [Github Actions](https://github.com/features/actions) to set up continuous
-  integration and deployment pipelines. Github is being used for version control already and actions integrates with
-  this well.
+- To deploy the blog, I opted to use [Github Actions](https://github.com/features/actions) to set up continuous
+  integration and deployment pipelines. Github is being used for version control already so Actions is a natural choice.
 
 ## High level technoblather
 
 Before delving into the details of the terraform declarations, I'd like to give an overview of the services used and how
 they relate to one another:
 
-* IAM for defining groups and policies to operate the solution
-* Route53 for DNS management
-* Certificate Manager for provisioning an SSL certificate
-* Cloudfront for distributing and caching the blog
-* S3 for storing terraform state and blog content
-* SNS for publishing events related to operating the blog
-* Cloudwatch for acting on events (e.g., alerting)
+- IAM for defining groups and policies to operate the solution
+- Route53 for DNS management
+- Certificate Manager for provisioning an SSL certificate
+- Cloudfront for distributing and caching the blog
+- S3 for storing terraform state and blog content
+- SNS for publishing events related to operating the blog
+- Cloudwatch for acting on events (e.g., alerting)
 
 This will look familiar if you've ever hosted a static website via S3. Everything detailed in this blog post could just
 as well be applied to a single page application, e.g. a React app.
@@ -80,7 +79,7 @@ Visualized, this looks like:
 ## Getting into the nitty-gritty
 
 Now, let's get into the details. We'll begin with explaining the IAM user administering this account, moving onto the
-services used from the front to the back of web traffic, ending with a brief overview of how the pipelines are set up.
+services used from the front to the back of web traffic, and ending with a brief overview of how the pipelines are set up.
 You can find all code referenced in [this github repository](https://github.com/laaksomavrick/devblog).
 
 ### Creating an IAM user for the project
@@ -88,26 +87,26 @@ You can find all code referenced in [this github repository](https://github.com/
 You should never use your root account for provisioning resources for a project and instead embrace applying
 least-privilege permissions to an IAM user, group, or
 role [[2]](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html). For this project, I opted to create a
-separate IAM user with the following amazon managed policies attached from my `AdministratorAccess` account.
+separate IAM user with the following Amazon managed policies attached via my `AdministratorAccess` account.
 
-* AmazonS3FullAccess
-* CloudWatchFullAccess
-* CloudFrontFullAccess
-* AmazonSNSFullAccess
-* AmazonRoute53FullAccess
-* AWSCertificateManagerFullAccess
+- AmazonS3FullAccess
+- CloudWatchFullAccess
+- CloudFrontFullAccess
+- AmazonSNSFullAccess
+- AmazonRoute53FullAccess
+- AWSCertificateManagerFullAccess
 
 This isn't in the terraform declarations because I needed it prior to writing the terraform declarations (i.e., while I
-was figuring out how to do all this). In other words, a typical chicken-and-egg problem. In retrospect, I could have
+was figuring out how to do all this). In other words, a chicken-and-egg problem. In retrospect, I could have
 used a `AdministratorAccess` designated account to create this IAM user via terraform and then assume the created IAM
-user for all subsequent commands. But, this was still the experimental stage.
+user for all subsequent commands.
 
 ### Authoring the infrastructure
 
 Prepare yourself for lots of [HCL](https://developer.hashicorp.com/terraform/language/syntax/configuration).
 
-We'll start with the module entry point (`main.tf`), my provider declarations (`aws.tf`), and my terraform
-variables (`variables.tf`)
+We'll start with the module entry point (`main.tf`), the provider declarations (`aws.tf`), and the terraform
+variables (`variables.tf`).
 
 ```hcl
 # main.tf
@@ -187,10 +186,10 @@ common_tags = {
 
 #### Route53 and Certificate Manager
 
-Moving onto DNS. The vast majority of my career has been in development, so DNS and SSL are one of those things I've
-skimmed a how-to as little as possible and moved on. Trying to make amends here - I have a few hobby projects I operate
-now (sole user) and know the difference between an `A` record and a `CNAME`. Also smart enough to delegate certificate
-renewal to an automated process or a service.
+Moving onto DNS. The vast majority of my career has been in development, so DNS and SSL are a topic I've
+skimmed a how-to-tutorial as little as possible to accomplish my goal and moved on. Trying to make amends here - I have a few hobby projects I operate
+now (sole user) and know the difference between an `A` record and a `CNAME` record. Also smart (lazy) enough to delegate certificate
+renewal to an automated process or service.
 
 ```hcl
 # route53.tf
@@ -276,15 +275,14 @@ resource "aws_acm_certificate_validation" "cert_validation" {
 Here we're setting up SSL for our domain name. This is almost verbatim copied
 from [the terraform documentation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/acm_certificate_validation)
 . Setting up `DNS` validation is recommended and was easier than trying to register a mail server for my domain. Note
-the usage of the `aws.acm_provider` to set SSL certificates up via `us-east-1`. Validating my domain took some time (
-nearly an hour) which had me wondering whether I had misconfigured something.
+the usage of the `aws.acm_provider` to set SSL certificates up via `us-east-1`. Validating the domain took some time (nearly an hour) which had me wondering whether I had misconfigured something.
 
 #### Cloudfront
 
-Cloudfront is a CDN which we can use to have low latency responses to requests for our content. We use it to cache the
+Cloudfront is a highly-available, globally distributed CDN which we can leverage to have low latency responses to requests for our content. We use it to cache the
 content of our blog through a distribution, specifying the origin (S3), security parameters (e.g. SSL enforcement),
 geographic restrictions, and caching
-behaviours [[5]](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-overview.html)
+behaviours [[5]](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-overview.html).
 
 ```hcl
 # cloudfront.tf
@@ -413,13 +411,13 @@ resource "aws_cloudfront_origin_access_control" "root_s3_origin_access_control" 
 
 ```
 
-Of note here: our origin is our S3 bucket, our root object is `index.html`, we restrict access to the S3 bucket by
-specifying an `aws_cloudfront_origin_access_control` such that only cloudfront can access it, we enforce SSL, and we set
-up our cache properties (TTL, compression).
+Of note here: the origin is our S3 bucket, our root object is `index.html`, we restrict access to the S3 bucket by
+specifying an `aws_cloudfront_origin_access_control` such that only Cloudfront can access it, we enforce SSL, and we set
+up the cache properties (TTL, compression).
 
-So, this means that all requests must be routed through cloudfront - accessing our bucket via the bucket url will result in a
-rejected request. HTTP requests will be redirected to https. Content is cached for as long as possible - the only time we want
-the cache to be invalidated is upon a new deployment (you'll see later that our CI/CD pipeline invalidates the
+So, this means that all requests must be routed through Cloudfront - accessing the S3 bucket via the bucket url will result in a
+rejected request. HTTP requests will be redirected to HTTPS. Content is cached for as long as possible - the only time we want
+the cache to be invalidated is when a new deployment occurs (you'll see later that the CI/CD pipeline invalidates the
 distribution when deploying changes).
 
 Via Google's Lighthouse tool, this configuration was evaluated with a 100/100 for performance. Not too shabby.
@@ -428,7 +426,7 @@ Via Google's Lighthouse tool, this configuration was evaluated with a 100/100 fo
 
 Blog content is hosted in S3. One bucket contains the build output from Gatsby, the other serves as a redirect to the
 aforementioned bucket. Of note, these buckets are private and only accessible to our specified Cloudfront distribution.
-Versioning is also enabled in case of any oopses.
+Versioning is also enabled in case of any "oopses" (disaster recovery, fat finger clicking delete).
 
 ```hcl
 # www_bucket.tf
@@ -512,7 +510,7 @@ resource "aws_s3_bucket_website_configuration" "root_blog_website_configuration"
 
 ```json
 // s3-policy.json
-        
+
 {
   "Version": "2012-10-17",
   "Statement": {
@@ -530,13 +528,11 @@ resource "aws_s3_bucket_website_configuration" "root_blog_website_configuration"
     }
   }
 }
-
 ```
 
 #### Cloudwatch Alarms and SNS
 
-In the interest of improving my capabilities around operating software, I wanted to make sure I had some form of monitoring and alerting in place. Cloudfront publishes some metrics by default which can be consumed by Cloudwatch [[6]](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/monitoring-using-cloudwatch.html). So, I figured I should send myself an email if my blog ever begins returning a `500` error (i.e., something unexpected has gone wrong and my content is no longer online).
-
+In the interest of improving my capabilities around operating software, I wanted to make sure I had some form of monitoring and alerting in place (DevOps - right?). Cloudfront publishes a set of metrics by default which can be consumed by Cloudwatch [[6]](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/monitoring-using-cloudwatch.html). So, I figured I should send myself an email if my blog ever begins returning a `500` error (i.e., something unexpected has gone wrong and my content is no longer available).
 
 ```hcl
 # cloudwatch.tf
@@ -602,19 +598,20 @@ resource "aws_sns_topic_subscription" "technoblather_sns_topic_500_error_thresho
 
 The `5xxErrorRate` metric triggers an alarm if the _average threshold of errors is >= 1 within a minute_. In plain language, if it ever happens, I'll get an alarm. One gotcha I had while setting this up was configuring the `treat_missing_data` to explicitly be `notBreaching`. This means no data being returned will be an `OK` instead of an `INSUFFICIENT_DATA`. In our case, no data is a good thing.
 
-The alarm triggers an event to be published to an SNS topic. That topic has a subscription resulting in an email being triggered as a result.
+The alarm triggers an event to be published to an SNS topic. That topic has a subscription resulting in an email send being triggered.
 
-So, whenever a `5xx` happens from a request to the blog, the `alert_emails` get an email. I was able to test this using the [set-alarm-state](https://docs.aws.amazon.com/cli/latest/reference/cloudwatch/set-alarm-state.html) command from the `aws` cli.
+So, whenever a `5xx` happens from a request to the blog, the `alert_emails` get an email. I was able to test this using the [set-alarm-state](https://docs.aws.amazon.com/cli/latest/reference/cloudwatch/set-alarm-state.html) command from the `aws` CLI.
 
 #### Authoring the CI/CD pipeline
 
 Here things became more familiar for me. There are two processes I wanted to automate:
-* Verifying the changes we're pushing on a pull request are standardized
-* Deploying the changes when they've been merged
+
+- Verifying the changes we're pushing on a pull request are standardized
+- Deploying the changes when they've been merged
 
 For the first, we run formatters and check that gatsby can build without throwing an error.
 
-For the latter, we build an output artifact via Gatsby, sync it to S3, and invalidate our Cloudformation distribution to break the cache.
+For the latter, we build an output artifact via Gatsby, sync it to S3, and invalidate our Cloudfront distribution to break the cache such that our new content will be served.
 
 ```yml
 # verify_pull_request.yml
@@ -623,7 +620,7 @@ name: Verify pull request
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   verify:
@@ -665,7 +662,7 @@ name: Deploy to s3 and refresh cloudfront
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   deploy-to-s3:
@@ -703,21 +700,29 @@ jobs:
           aws cloudfront create-invalidation --distribution-id ${{ vars.CLOUDFRONT_ID }} --paths "/*";
 ```
 
-Notably, the AWS secret and environment variables are plumbed through Github's repository settings. I did have to set up an OIDC provider as per AWS's Github Action documentation [[7]](https://github.com/aws-actions/configure-aws-credentials#assuming-a-role) to facilitate this in a secure way. 
+Notably, the AWS secret and environment variables are plumbed through Github's repository settings. I did have to set up an OIDC provider as per AWS's Github Actions documentation [[7]](https://github.com/aws-actions/configure-aws-credentials#assuming-a-role) to facilitate this in a secure way.
 
 ## So, what's next?
 
-We covered a large quantity of information scrolling through the 2000 and some words to this point. There are a number of next steps I have planned with the intention of validating more of my knowledge (and simply learning new things). While not exhaustive, next steps (for your own blog, perhaps) could be:
-* Setting up request logging in Cloudfront
-* Creating more alarms for metrics published to Cloudwatch (e.g. p99 latency, cache misses)
-* Setting up DDoS protection with AWS WAF and/or AWS Shield
-* Setting up a staging environment to validate changes before deploying to production
-* Setting up a budget via AWS Budgets
+We covered a large quantity of information scrolling through the 2000 and some words to this point. There are a number of next steps I have planned with the intention of validating more of my knowledge (and simply learning new things). While not exhaustive, next steps could be:
 
-...and more I can't even think of.
+- Setting up request logging in Cloudfront
+- Creating more alarms for metrics published to Cloudwatch (e.g. p99 latency, cache misses)
+- Setting up DDoS protection with AWS WAF and/or AWS Shield
+- Setting up a staging environment to validate changes before deploying to production
+- Setting up a budget via AWS Budgets
+- Setting up a "subscribe" feature for new posts published to the blog
 
-I'll likely write some more posts on these topics as I make my way through them alongside my other hobby projects. Notably, I operate a [weightlifting application](https://hugelifts.ca/) and a [goal tracking application](https://ownyourday.ca/). Sign ups for both are disabled (aside from my partner who graciously humours me) as I don't want to support users (yet).
+...and more I can't even think of yet.
 
-## Conclusion
+I'll likely write posts on these topics as I make my way through them alongside my other hobby projects. Notably, I operate a [weightlifting application](https://hugelifts.ca/) and a [goal tracking application](https://ownyourday.ca/). Sign ups for both are disabled (aside from my partner who graciously humours me) but if you're really curious you can bother me for an account.
 
-Did this blog meet my goals? Aforementioned criteria, learning things, new tool for engaging with the developer community and promotion of open learning? 
+## Final thoughts
+
+Overall, going through the process of building and documenting my experience gave me the opportunity to validate my understanding and learn what I didn't understand. If you can't explain something, you don't understand it.
+
+A static website is a good entry point for learning how to compose services with AWS given it's a relatively simple architecture and has many opportunities for expansion. Moreover, treating it like a live service meant I had to consider how to monitor, operate, and observe my architecture - all of which are critical components of developing and operating live services in a DevOps fashion.
+
+Having this blog presents myself the opportunity to share those 'Aha!' moments openly with the technical community and to hopefully help people out if they meander here via hyperlinks or search queries. Writing is something I used to do lots (postsecondary education: english, philosophy, computer science) and haven't done much of lately. It's a valuable skill to keep sharp.
+
+I'm hopeful you learned something if you made it this far. If not, I'm hopeful you at least found something useful to copy and paste for whatever you're working on. Cheers all.
