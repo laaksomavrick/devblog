@@ -29,7 +29,6 @@ jobs:
 
       - name: Terraform fmt
         run: terraform fmt -check
-        continue-on-error: true
 
       - name: Terraform Validate
         run: terraform validate -no-color
