@@ -1,6 +1,6 @@
 ---
 title: Building Technoblather
-date: "2023-08-02T00:00:00.000Z"
+date: "2023-02-08T00:00:00.000Z"
 description: Or, my experience deploying and operating a static website in AWS with Cloudfront and S3.
 ---
 
