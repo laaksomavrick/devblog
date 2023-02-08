@@ -35,7 +35,7 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
 
     function_association {
       event_type   = "viewer-request"
-      function_arn = aws_cloudfront_function.www_add_index.arn
+      function_arn = aws_cloudfront_function.add_index_cloudfront_function.arn
     }
 
     viewer_protocol_policy = "redirect-to-https"
@@ -68,20 +68,21 @@ resource "aws_cloudfront_origin_access_control" "www_s3_origin_access_control" {
   signing_protocol                  = "sigv4"
 }
 
-resource "aws_cloudfront_function" "www_add_index" {
-  name    = "www_add_index"
-  runtime = "cloudfront-js-1.0"
-  comment = "my function"
-  publish = true
-  code    = file("functions/wwwAddIndex.js")
-}
-
 # Cloudfront S3 for redirect to www.
 resource "aws_cloudfront_distribution" "root_s3_distribution" {
   origin {
-    domain_name              = aws_s3_bucket.root_bucket.bucket_regional_domain_name
-    origin_id                = "S3-.${var.bucket_name}"
+    domain_name = aws_s3_bucket.root_bucket.website_endpoint
+    origin_id   = "S3-.${var.bucket_name}"
+
+    # https://stackoverflow.com/a/55042824/4198382
+    custom_origin_config {
+      http_port              = "80"
+      https_port             = "443"
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1", "TLSv1.1", "TLSv1.2"]
+    }
   }
+
 
   enabled         = true
   is_ipv6_enabled = true
@@ -122,4 +123,12 @@ resource "aws_cloudfront_distribution" "root_s3_distribution" {
   }
 
   tags = var.common_tags
+}
+
+resource "aws_cloudfront_function" "add_index_cloudfront_function" {
+  name    = "add_index"
+  runtime = "cloudfront-js-1.0"
+  comment = ""
+  publish = true
+  code    = file("functions/wwwAddIndex.js")
 }

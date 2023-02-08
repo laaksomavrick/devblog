@@ -246,8 +246,12 @@ requests for our domain and traffic them to the appropriate service (Cloudfront)
 You'll notice a recurring duplication between a `www` resource and a `root` resource as we proceed down the service
 stack. This is because I needed two buckets in order to handle url
 redirection [[4]](https://docs.aws.amazon.com/AmazonS3/latest/userguide/how-to-page-redirect.html#redirect-endpoint-host)
-. I didn't want a request to `technoblather.ca` to result in a `404`, so `root` functions as a redirect to my `www`
+.
+
+I didn't want a request to `technoblather.ca` to result in a `404`, so `root` functions as a redirect to my `www`
 bucket.
+
+Moreover, having a canonical url is a good practice [[5]](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Choosing_between_www_and_non-www_URLs#so_do_i_have_to_choose_one_or_the_other_for_my_web_site), so two `A` records pointing to one Cloudfront distribution wasn't tenable.
 
 ```hcl
 # acm.tf
@@ -282,7 +286,7 @@ the usage of the `aws.acm_provider` to set SSL certificates up via `us-east-1`. 
 Cloudfront is a highly-available, globally distributed CDN which we can leverage to have low latency responses to requests for our content. We use it to cache the
 content of our blog through a distribution, specifying the origin (S3), security parameters (e.g. SSL enforcement),
 geographic restrictions, and caching
-behaviours [[5]](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-overview.html).
+behaviours [[6]](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-overview.html).
 
 ```hcl
 # cloudfront.tf
@@ -321,6 +325,12 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
       }
     }
 
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.add_index_cloudfront_function.arn
+    }
+
     viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 31536000
     default_ttl            = 31536000
@@ -354,10 +364,18 @@ resource "aws_cloudfront_origin_access_control" "www_s3_origin_access_control" {
 # Cloudfront S3 for redirect to www.
 resource "aws_cloudfront_distribution" "root_s3_distribution" {
   origin {
-    domain_name              = aws_s3_bucket.root_bucket.bucket_regional_domain_name
-    origin_access_control_id = aws_cloudfront_origin_access_control.root_s3_origin_access_control.id
+    domain_name              = aws_s3_bucket.root_bucket.website_endpoint
     origin_id                = "S3-.${var.bucket_name}"
+
+    # https://stackoverflow.com/a/55042824/4198382
+    custom_origin_config {
+      http_port              = "80"
+      https_port             = "443"
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1", "TLSv1.1", "TLSv1.2"]
+    }
   }
+
 
   enabled         = true
   is_ipv6_enabled = true
@@ -400,34 +418,32 @@ resource "aws_cloudfront_distribution" "root_s3_distribution" {
   tags = var.common_tags
 }
 
-
-resource "aws_cloudfront_origin_access_control" "root_s3_origin_access_control" {
-  name                              = "root-s3-origin-access-control"
-  description                       = ""
-  origin_access_control_origin_type = "s3"
-  signing_behavior                  = "always"
-  signing_protocol                  = "sigv4"
+resource "aws_cloudfront_function" "add_index_cloudfront_function" {
+  name    = "add_index"
+  runtime = "cloudfront-js-1.0"
+  comment = ""
+  publish = true
+  code    = file("functions/wwwAddIndex.js")
 }
-
 ```
 
 ```javascript
 /// wwwAddIndex.js
 
 function handler(event) {
-  var request = event.request;
-  var uri = request.uri;
+  var request = event.request
+  var uri = request.uri
 
   // Check whether the URI is missing a file name.
-  if (uri.endsWith('/')) {
-    request.uri += 'index.html';
+  if (uri.endsWith("/")) {
+    request.uri += "index.html"
   }
   // Check whether the URI is missing a file extension.
-  else if (!uri.includes('.')) {
-    request.uri += '/index.html';
+  else if (!uri.includes(".")) {
+    request.uri += "/index.html"
   }
 
-  return request;
+  return request
 }
 ```
 
@@ -478,23 +494,9 @@ resource "aws_s3_bucket_versioning" "blog_versioning" {
   }
 }
 
-resource "aws_s3_bucket_website_configuration" "blog_website_configuration" {
-  bucket = aws_s3_bucket.www_bucket.id
-
-  index_document {
-    suffix = "index.html"
-  }
-
-  error_document {
-    key = "404.html"
-  }
-}
-
 resource "aws_s3_bucket_policy" "blog_policy" {
   bucket = aws_s3_bucket.www_bucket.id
-  policy = templatefile("templates/s3-private-policy.json", {
-    bucket = "www.${var.bucket_name}", cloudfront_arn = aws_cloudfront_distribution.www_s3_distribution.arn
-  })
+  policy = templatefile("templates/s3-private-policy.json", { bucket = "www.${var.bucket_name}", cloudfront_arn = aws_cloudfront_distribution.www_s3_distribution.arn })
 }
 
 resource "aws_s3_bucket_cors_configuration" "blog_cors_configuration" {
@@ -519,14 +521,12 @@ resource "aws_s3_bucket" "root_bucket" {
 
 resource "aws_s3_bucket_policy" "root_blog_policy" {
   bucket = aws_s3_bucket.root_bucket.id
-  policy = templatefile("templates/s3-private-policy.json", {
-    bucket = var.bucket_name, cloudfront_arn = aws_cloudfront_distribution.root_s3_distribution.arn
-  })
+  policy = templatefile("templates/s3-public-policy.json", { bucket = var.bucket_name })
 }
 
 resource "aws_s3_bucket_acl" "root_acl" {
   bucket = aws_s3_bucket.root_bucket.id
-  acl    = "private"
+  acl    = "public-read"
 }
 
 resource "aws_s3_bucket_website_configuration" "root_blog_website_configuration" {
@@ -560,9 +560,28 @@ resource "aws_s3_bucket_website_configuration" "root_blog_website_configuration"
 }
 ```
 
+```json
+// s3-public-policy.json
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadGetObject",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::${bucket}/*"
+    }
+  ]
+}
+```
+
+The `root` bucket has a much more permissive policy given it serves as a redirect to the `www` bucket. Also note the bucket acl is `public-read` versus `private` and that the website configuration includes a `redirect_all_requests_to` block.
+
 #### Cloudwatch Alarms and SNS
 
-In the interest of improving my capabilities around operating software, I wanted to make sure I had some form of monitoring and alerting in place (DevOps - right?). Cloudfront publishes a set of metrics by default which can be consumed by Cloudwatch [[6]](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/monitoring-using-cloudwatch.html). So, I figured I should send myself an email if my blog ever begins returning a `500` error (i.e., something unexpected has gone wrong and my content is no longer available).
+In the interest of improving my capabilities around operating software, I wanted to make sure I had some form of monitoring and alerting in place (DevOps - right?). Cloudfront publishes a set of metrics by default which can be consumed by Cloudwatch [[7]](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/monitoring-using-cloudwatch.html). So, I figured I should send myself an email if my blog ever begins returning a `500` error (i.e., something unexpected has gone wrong and my content is no longer available).
 
 ```hcl
 # cloudwatch.tf
@@ -730,7 +749,7 @@ jobs:
           aws cloudfront create-invalidation --distribution-id ${{ vars.CLOUDFRONT_ID }} --paths "/*";
 ```
 
-Notably, the AWS secret and environment variables are plumbed through Github's repository settings. I did have to set up an OIDC provider as per AWS's Github Actions documentation [[7]](https://github.com/aws-actions/configure-aws-credentials#assuming-a-role) to facilitate this in a secure way.
+Notably, the AWS secret and environment variables are plumbed through Github's repository settings. I did have to set up an OIDC provider as per AWS's Github Actions documentation [[8]](https://github.com/aws-actions/configure-aws-credentials#assuming-a-role) to facilitate this in a secure way.
 
 ## So, what's next?
 
