@@ -15,21 +15,9 @@ resource "aws_s3_bucket_versioning" "blog_versioning" {
   }
 }
 
-resource "aws_s3_bucket_website_configuration" "blog_website_configuration" {
-  bucket = aws_s3_bucket.www_bucket.id
-
-  index_document {
-    suffix = "index.html"
-  }
-
-  error_document {
-    key = "404.html"
-  }
-}
-
 resource "aws_s3_bucket_policy" "blog_policy" {
   bucket = aws_s3_bucket.www_bucket.id
-  policy = templatefile("templates/s3-policy.json", { bucket = "www.${var.bucket_name}", cloudfront_arn = aws_cloudfront_distribution.www_s3_distribution.arn })
+  policy = templatefile("templates/s3-private-policy.json", { bucket = "www.${var.bucket_name}", cloudfront_arn = aws_cloudfront_distribution.www_s3_distribution.arn })
 }
 
 resource "aws_s3_bucket_cors_configuration" "blog_cors_configuration" {
