@@ -6,8 +6,8 @@
     "Principal": {
       "Service": "cloudfront.amazonaws.com"
     },
-    "Action": "s3:GetObject",
-    "Resource": "arn:aws:s3:::${bucket}/*",
+    "Action": ["s3:GetObject", "s3:ListBucket"],
+    "Resource": ["arn:aws:s3:::${bucket}/*", "arn:aws:s3:::${bucket}"],
     "Condition": {
       "StringEquals": {
         "AWS:SourceArn": "${cloudfront_arn}"
