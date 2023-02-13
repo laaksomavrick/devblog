@@ -61,13 +61,13 @@ facilitate this:
 Before delving into the details of the terraform declarations, I'd like to give an overview of the services used and how
 they relate to one another:
 
-- IAM for defining groups and policies to operate the solution
-- Route53 for DNS management
-- Certificate Manager for provisioning an SSL certificate
-- Cloudfront for distributing and caching the blog
-- S3 for storing terraform state and blog content
-- SNS for publishing events related to operating the blog
-- Cloudwatch for acting on events (e.g., alerting)
+- IAM for defining groups and policies to operate the solution.
+- Route53 for DNS management.
+- Certificate Manager for provisioning an SSL certificate.
+- Cloudfront for distributing and caching the blog.
+- S3 for storing terraform state and blog content.
+- SNS for publishing events related to operating the blog.
+- Cloudwatch for acting on events (e.g., alerting).
 
 This will look familiar if you've ever hosted a static website via S3. Everything detailed in this blog post could just
 as well be applied to a single page application, e.g. a React app.
@@ -245,8 +245,7 @@ requests for our domain and traffic them to the appropriate service (Cloudfront)
 
 You'll notice a recurring duplication between a `www` resource and a `root` resource as we proceed down the service
 stack. This is because I needed two buckets in order to handle url
-redirection [[4]](https://docs.aws.amazon.com/AmazonS3/latest/userguide/how-to-page-redirect.html#redirect-endpoint-host)
-.
+redirection [[4]](https://docs.aws.amazon.com/AmazonS3/latest/userguide/how-to-page-redirect.html#redirect-endpoint-host).
 
 I didn't want a request to `technoblather.ca` to result in a `404`, so `root` functions as a redirect to my `www`
 bucket.
@@ -655,8 +654,8 @@ So, whenever a `5xx` happens from a request to the blog, the `alert_emails` get 
 
 Here things became more familiar for me. There are two processes I wanted to automate:
 
-- Verifying the changes we're pushing on a pull request are standardized
-- Deploying the changes when they've been merged
+- Verifying the changes we're pushing on a pull request are standardized.
+- Deploying the changes when they've been merged.
 
 For the first, we run formatters and check that gatsby can build without throwing an error.
 
@@ -755,14 +754,15 @@ Notably, the AWS secret and environment variables are plumbed through Github's r
 
 We covered a large quantity of information scrolling through the 2000 and some words to this point. There are a number of next steps I have planned with the intention of validating more of my knowledge (and simply learning new things). While not exhaustive, next steps could be:
 
-- Setting up request logging in Cloudfront
-- Creating more alarms for metrics published to Cloudwatch (e.g. p99 latency, cache misses)
-- Setting up DDoS protection with AWS WAF and/or AWS Shield
-- Setting up a staging environment to validate changes before deploying to production
-- Setting up a budget via AWS Budgets
-- Setting up a "subscribe" feature for new posts published to the blog
+- Setting up request logging in Cloudfront.
+- Creating more alarms for metrics published to Cloudwatch (e.g. p99 latency, cache misses).
+- Setting up DDoS protection with AWS WAF and/or AWS Shield.
+- Setting up a staging environment to validate changes before deploying to production.
+- Setting up a budget via AWS Budgets.
+- Setting up a "subscribe" feature for new posts published to the blog.
+- Handling [404 redirects correctly](/handling-404-not-found-content-with-cloudfront-and-s3).
 
-...and more I can't even think of yet.
+...and more.
 
 I'll likely write posts on these topics as I make my way through them alongside my other hobby projects. Notably, I operate a [weightlifting application](https://hugelifts.ca/) and a [goal tracking application](https://ownyourday.ca/). Sign ups for both are disabled (aside from my partner who graciously humours me) but if you're really curious you can bother me for an account.
 
