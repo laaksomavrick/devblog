@@ -4,12 +4,18 @@ import { Link, graphql } from "gatsby"
 import Bio from "../components/bio"
 import Layout from "../components/layout"
 import Seo from "../components/seo"
+import ReactGA from "react-ga"
+import { useEffect } from "react"
 
 const BlogPostTemplate = ({
   data: { previous, next, site, markdownRemark: post },
   location,
 }) => {
   const siteTitle = site.siteMetadata?.title || `Title`
+
+  useEffect(() => {
+    ReactGA.pageview(window.location.pathname)
+  }, [])
 
   return (
     <Layout location={location} title={siteTitle}>
