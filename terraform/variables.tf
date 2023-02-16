@@ -1,3 +1,12 @@
+variable "workspace_iam_roles" {
+  type = map(string)
+  description = "The IAM roles for the different workspace environments to be assumed"
+  default = {
+    staging    = "arn:aws:iam::844544735981:role/TechnoblatherAdministrator" # TODO: specify in tfvars
+    production = "arn:aws:iam::844544735981:role/TechnoblatherAdministrator" # TODO: specify in tfvars
+  }
+}
+
 variable "domain_name" {
   type        = string
   description = "The domain name for the website."

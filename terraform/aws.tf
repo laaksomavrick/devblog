@@ -1,7 +1,10 @@
 provider "aws" {
-  region                   = "ca-central-1"
-  shared_credentials_files = ["~/.aws/credentials"]
-  profile                  = "technoblather"
+  shared_credentials_files = ["~/.aws/credentials"] # TODO: is this necessary?
+  profile = "mlaakso-admin" # TODO: extract to variable
+
+  assume_role {
+    role_arn = var.workspace_iam_roles[terraform.workspace]
+  }
 }
 
 provider "aws" {
