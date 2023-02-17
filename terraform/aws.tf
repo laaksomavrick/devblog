@@ -1,6 +1,5 @@
 provider "aws" {
-  shared_credentials_files = ["~/.aws/credentials"] # TODO: is this necessary?
-  profile = "mlaakso-admin" # TODO: extract to variable
+  profile = var.aws_profile
 
   assume_role {
     role_arn = var.workspace_iam_roles[terraform.workspace]

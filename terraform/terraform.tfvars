@@ -1,3 +1,4 @@
+aws_profile  = "default"
 domain_name  = "technoblather.ca"
 bucket_name  = "technoblather.ca"
 alert_emails = ["laakso.mavrick@gmail.com"]
