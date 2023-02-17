@@ -23,6 +23,20 @@ module.exports = {
   plugins: [
     `gatsby-plugin-image`,
     {
+      resolve: `gatsby-plugin-google-gtag`,
+      options: {
+        trackingIds: ["G-5R329E7NN3"],
+        gtagConfig: {
+          anonymize_ip: true,
+          cookie_expires: 0,
+          send_page_view: true,
+        },
+        pluginConfig: {
+          head: false,
+        },
+      },
+    },
+    {
       resolve: `gatsby-source-filesystem`,
       options: {
         path: `${__dirname}/content/blog`,
@@ -132,7 +146,7 @@ module.exports = {
         web: [
           {
             name: `DM Sans`,
-            file: `https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap`,
+            file: `https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700`,
           },
         ],
       },
