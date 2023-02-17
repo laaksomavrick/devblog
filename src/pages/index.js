@@ -1,22 +1,13 @@
 import * as React from "react"
 import { Link, graphql } from "gatsby"
-import ReactGA from "react-ga"
 
 import Bio from "../components/bio"
 import Layout from "../components/layout"
 import Seo from "../components/seo"
-import { useEffect } from "react"
-
-const TRACKING_ID = "G-5R329E7NN3"
-ReactGA.initialize(TRACKING_ID)
 
 const BlogIndex = ({ data, location }) => {
   const siteTitle = data.site.siteMetadata?.title || `Title`
   const posts = data.allMarkdownRemark.nodes
-
-  useEffect(() => {
-    ReactGA.pageview(window.location.pathname)
-  }, [])
 
   if (posts.length === 0) {
     return (
