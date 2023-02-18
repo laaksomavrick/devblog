@@ -130,5 +130,5 @@ resource "aws_cloudfront_function" "add_index_cloudfront_function" {
   runtime = "cloudfront-js-1.0"
   comment = ""
   publish = true
-  code    = file("functions/wwwAddIndex.js")
+  code    = file("${path.module}/functions/wwwAddIndex.js")
 }

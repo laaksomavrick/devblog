@@ -5,7 +5,7 @@ resource "aws_s3_bucket" "root_bucket" {
 
 resource "aws_s3_bucket_policy" "root_blog_policy" {
   bucket = aws_s3_bucket.root_bucket.id
-  policy = templatefile("templates/s3-public-policy.json", { bucket = var.bucket_name })
+  policy = templatefile("${path.module}/templates/s3-public-policy.json", { bucket = var.bucket_name })
 }
 
 resource "aws_s3_bucket_acl" "root_acl" {

@@ -15,3 +15,21 @@ terraform {
 
   required_version = ">= 1.2.0"
 }
+
+module "production_blog" {
+  source = "./modules/blog"
+
+  aws_profile  = "default"
+  alert_emails = ["laakso.mavrick@gmail.com"]
+  common_tags = {
+    Project     = "technoblather"
+    Environment = "production"
+  }
+  domain_name = "technoblather.ca"
+  bucket_name = "technoblather.ca"
+
+  providers = {
+    aws.acm_provider = aws.acm_provider
+  }
+}
+
