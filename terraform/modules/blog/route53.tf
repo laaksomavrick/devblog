@@ -42,3 +42,14 @@ resource "aws_route53_record" "main" {
   type            = each.value.type
   zone_id         = aws_route53_zone.main.zone_id
 }
+
+resource "aws_route53_record" "staging" {
+  count           = var.is_production ? 1 : 0
+  allow_overwrite = true
+  name            = "staging.${var.domain_name}"
+  ttl             = 172800
+  type            = "NS"
+  zone_id         = aws_route53_zone.main.zone_id
+
+  records = var.staging_name_servers
+}

@@ -1,3 +1,12 @@
+data "terraform_remote_state" "staging_name_servers" {
+  backend = "s3"
+  config = {
+    bucket = "technoblather-staging-terraform"
+    key    = "tfstate"
+    region = "ca-central-1"
+  }
+}
+
 terraform {
   required_providers {
     aws = {
@@ -19,23 +28,21 @@ terraform {
 module "technoblather" {
   source = "../../modules/blog"
 
+  # TODO: extract to tfvars
   aws_profile  = "default"
+  stack_name   = "production"
   alert_emails = ["laakso.mavrick@gmail.com"]
   common_tags = {
     Project     = "technoblather"
     Environment = "production"
   }
-  domain_name = "technoblather.ca"
-  bucket_name = "technoblather.ca"
+  domain_name   = "technoblather.ca"
+  bucket_name   = "technoblather.ca"
+  is_production = true
+
+  staging_name_servers = data.terraform_remote_state.staging_name_servers.outputs.aws_route53_zone_name_servers
 
   providers = {
     aws.acm_provider = aws.acm_provider
   }
 }
-
-# Would be nice to:
-# - run terraform plan/terraform apply without specifying the module (as changes will affect both)
-# - not accidentally run an infra update on production
-#    => module versioning?
-# create iam roles for staging/prod respectively for use with running this ?
-# https://blog.gruntwork.io/how-to-create-reusable-infrastructure-with-terraform-modules-25526d65f73d

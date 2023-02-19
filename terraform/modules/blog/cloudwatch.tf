@@ -1,6 +1,6 @@
 resource "aws_cloudwatch_metric_alarm" "blog_broken_alarm" {
   provider            = aws.acm_provider
-  alarm_name          = "blog-broken-alarm"
+  alarm_name          = "${var.stack_name}-blog-broken-alarm"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "1"
   metric_name         = "5xxErrorRate"

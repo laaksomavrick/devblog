@@ -61,7 +61,7 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
 }
 
 resource "aws_cloudfront_origin_access_control" "www_s3_origin_access_control" {
-  name                              = "www-s3-origin-access-control"
+  name                              = "${var.stack_name}-www-s3-origin-access-control"
   description                       = ""
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
@@ -126,9 +126,13 @@ resource "aws_cloudfront_distribution" "root_s3_distribution" {
 }
 
 resource "aws_cloudfront_function" "add_index_cloudfront_function" {
-  name    = "add_index"
+  name    = "${var.stack_name}_add_index"
   runtime = "cloudfront-js-1.0"
   comment = ""
   publish = true
   code    = file("${path.module}/functions/wwwAddIndex.js")
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
