@@ -16,8 +16,8 @@ terraform {
   required_version = ">= 1.2.0"
 }
 
-module "production_blog" {
-  source = "./modules/blog"
+module "technoblather" {
+  source = "../../modules/blog"
 
   aws_profile  = "default"
   alert_emails = ["laakso.mavrick@gmail.com"]
@@ -33,3 +33,9 @@ module "production_blog" {
   }
 }
 
+# Would be nice to:
+# - run terraform plan/terraform apply without specifying the module (as changes will affect both)
+# - not accidentally run an infra update on production
+#    => module versioning?
+# create iam roles for staging/prod respectively for use with running this ?
+# https://blog.gruntwork.io/how-to-create-reusable-infrastructure-with-terraform-modules-25526d65f73d

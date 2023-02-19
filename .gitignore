@@ -71,7 +71,8 @@ yarn-error.log
 .idea
 
 # Local .terraform directories
-**/.terraform/*
+terraform/environments/production/.terraform/*
+terraform/environments/staging/.terraform/*
 
 # .tfstate files
 *.tfstate
@@ -104,5 +105,4 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
-
 .terraform.lock.hcl
