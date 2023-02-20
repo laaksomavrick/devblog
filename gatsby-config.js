@@ -137,5 +137,19 @@ module.exports = {
         ],
       },
     },
+    {
+      resolve: 'gatsby-plugin-robots-txt',
+      options: {
+        host: 'https://www.technoblather.ca',
+        env: {
+          development: {
+            policy: [{userAgent: '*', disallow: ['/']}]
+          },
+          production: {
+            policy: [{userAgent: '*', allow: '/'}]
+          }
+        }
+      }
+    }
   ],
 }
