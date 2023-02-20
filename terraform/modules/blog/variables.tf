@@ -1,7 +1,7 @@
 variable "aws_profile" {
   type        = string
   description = "The name of the aws profile to use."
-  default = "default"
+  default     = "default"
 }
 
 variable "domain_name" {
@@ -30,7 +30,7 @@ variable "common_tags" {
 variable "alert_emails" {
   type        = list(string)
   description = "A list of emails for alerting via cloudwatch alarms."
-  default = []
+  default     = []
 }
 
 variable "staging_name_servers" {

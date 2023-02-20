@@ -7,10 +7,10 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "technoblather-staging-terraform"
-    dynamodb_table = "technoblather-staging-terraform"
-    key            = "tfstate"
+    bucket         = "technoblather-terraform-states"
+    key            = "staging.tfstate"
     region         = "ca-central-1"
+    dynamodb_table = "technoblather-terraform"
   }
 
   required_version = ">= 1.2.0"

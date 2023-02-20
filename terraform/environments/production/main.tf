@@ -1,8 +1,8 @@
-data "terraform_remote_state" "staging_name_servers" {
+data "terraform_remote_state" "technoblather-staging" {
   backend = "s3"
   config = {
-    bucket = "technoblather-staging-terraform"
-    key    = "tfstate"
+    bucket = "technoblather-terraform-states"
+    key    = "staging.tfstate"
     region = "ca-central-1"
   }
 }
@@ -16,10 +16,10 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "technoblather-terraform"
-    dynamodb_table = "technoblather-terraform"
-    key            = "tfstate"
+    bucket         = "technoblather-terraform-states"
+    key            = "production.tfstate"
     region         = "ca-central-1"
+    dynamodb_table = "technoblather-terraform"
   }
 
   required_version = ">= 1.2.0"
@@ -36,7 +36,7 @@ module "technoblather" {
     Environment = "production"
   }
 
-  staging_name_servers = data.terraform_remote_state.staging_name_servers.outputs.aws_route53_zone_name_servers
+  staging_name_servers = data.terraform_remote_state.technoblather-staging.outputs.aws_route53_zone_name_servers
 
   providers = {
     aws.acm_provider = aws.acm_provider

@@ -28,7 +28,7 @@ jobs:
         run: npm run format:check
 
       - name: Terraform fmt
-        run: terraform fmt -check
+        run: terraform fmt -recursive -check
 
       - name: Terraform Validate
         run: terraform validate -no-color

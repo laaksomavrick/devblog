@@ -44,7 +44,7 @@ resource "aws_route53_record" "main" {
 }
 
 resource "aws_route53_record" "staging" {
-  count           = var.common_tags["Environment"] == "Production" ? 1 : 0
+  count           = var.common_tags["Environment"] == "production" ? 1 : 0
   allow_overwrite = true
   name            = "staging.${var.domain_name}"
   ttl             = 172800
