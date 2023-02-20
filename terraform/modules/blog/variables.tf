@@ -1,11 +1,7 @@
 variable "aws_profile" {
   type        = string
   description = "The name of the aws profile to use."
-}
-
-variable "stack_name" {
-  type        = string
-  description = "The stack name for the module. Must be unique."
+  default = "default"
 }
 
 variable "domain_name" {
@@ -13,23 +9,28 @@ variable "domain_name" {
   description = "The domain name for the website."
 }
 
-variable "bucket_name" {
-  type        = string
-  description = "The name of the bucket without the www. prefix. Normally domain_name."
-}
-
 variable "common_tags" {
   description = "Common tags you want applied to all components."
+  type = object({
+    Project     = string
+    Environment = string
+  })
+
+  validation {
+    condition     = var.common_tags["Environment"] == "production" || var.common_tags["Environment"] == "staging"
+    error_message = "Environment must be either 'staging' or 'production'"
+  }
+
+  validation {
+    condition     = var.common_tags["Project"] == "technoblather"
+    error_message = "Project must be 'technoblather'"
+  }
 }
 
 variable "alert_emails" {
   type        = list(string)
   description = "A list of emails for alerting via cloudwatch alarms."
-}
-
-variable "is_production" {
-  type        = bool
-  description = "Whether or not this environment is the production environment"
+  default = []
 }
 
 variable "staging_name_servers" {

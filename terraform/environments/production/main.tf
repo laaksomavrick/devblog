@@ -29,16 +29,12 @@ module "technoblather" {
   source = "../../modules/blog"
 
   # TODO: extract to tfvars
-  aws_profile  = "default"
-  stack_name   = "production"
+  domain_name  = "technoblather.ca"
   alert_emails = ["laakso.mavrick@gmail.com"]
   common_tags = {
     Project     = "technoblather"
     Environment = "production"
   }
-  domain_name   = "technoblather.ca"
-  bucket_name   = "technoblather.ca"
-  is_production = true
 
   staging_name_servers = data.terraform_remote_state.staging_name_servers.outputs.aws_route53_zone_name_servers
 

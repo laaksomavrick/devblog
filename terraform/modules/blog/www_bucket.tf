@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "www_bucket" {
-  bucket = "www.${var.bucket_name}"
+  bucket = "www.${var.domain_name}"
   tags   = var.common_tags
 }
 
@@ -17,7 +17,7 @@ resource "aws_s3_bucket_versioning" "blog_versioning" {
 
 resource "aws_s3_bucket_policy" "blog_policy" {
   bucket = aws_s3_bucket.www_bucket.id
-  policy = templatefile("${path.module}/templates/s3-private-policy.json", { bucket = "www.${var.bucket_name}", cloudfront_arn = aws_cloudfront_distribution.www_s3_distribution.arn })
+  policy = templatefile("${path.module}/templates/s3-private-policy.json", { bucket = "www.${var.domain_name}", cloudfront_arn = aws_cloudfront_distribution.www_s3_distribution.arn })
 }
 
 resource "aws_s3_bucket_cors_configuration" "blog_cors_configuration" {

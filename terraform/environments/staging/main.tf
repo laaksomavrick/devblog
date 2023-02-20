@@ -20,16 +20,11 @@ module "technoblather-staging" {
   source = "../../modules/blog"
 
   # TODO: extract to tfvars
-  aws_profile  = "default"
-  stack_name   = "staging"
-  alert_emails = ["laakso.mavrick@gmail.com"]
+  domain_name = "staging.technoblather.ca"
   common_tags = {
     Project     = "technoblather"
     Environment = "staging"
   }
-  domain_name   = "staging.technoblather.ca"
-  bucket_name   = "staging.technoblather.ca"
-  is_production = false
 
   providers = {
     aws.acm_provider = aws.acm_provider
