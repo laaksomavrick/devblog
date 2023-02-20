@@ -71,6 +71,7 @@ yarn-error.log
 .idea
 
 # Local .terraform directories
+terraform/environments/infrastructure/.terraform/*
 terraform/environments/production/.terraform/*
 terraform/environments/staging/.terraform/*
 
