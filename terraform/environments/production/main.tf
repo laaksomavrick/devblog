@@ -29,6 +29,7 @@ module "technoblather" {
   }
 
   staging_name_servers = data.terraform_remote_state.technoblather-staging.outputs.aws_route53_zone_name_servers
+  github_repo_path     = "laaksomavrick/devblog"
 
   providers = {
     aws.acm_provider = aws.acm_provider

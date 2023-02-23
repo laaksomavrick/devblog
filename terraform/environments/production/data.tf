@@ -7,11 +7,11 @@ data "terraform_remote_state" "infrastructure" {
   }
 }
 
-data "terraform_remote_state" "infrastructure" {
+data "terraform_remote_state" "technoblather-staging" {
   backend = "s3"
   config = {
     bucket = "technoblather-terraform-states"
-    key    = "infrastructure.tfstate"
+    key    = "staging.tfstate"
     region = "ca-central-1"
   }
 }

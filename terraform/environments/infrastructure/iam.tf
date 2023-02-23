@@ -17,6 +17,9 @@ data "aws_iam_policy_document" "provisioner_policy_document" {
       "iam:GetRole",
       "iam:ListRoles",
       "iam:ListServerCertificates",
+      "iam:CreateOpenIDConnectProvider",
+      "iam:GetOpenIDConnectProvider",
+      "iam:DeleteOpenIDConnectProvider",
       "oam:ListSinks"
     ]
     resources = ["*"]

@@ -38,3 +38,9 @@ variable "staging_name_servers" {
   description = "List of staging name servers. Needs to be set if is_production is true."
   default     = []
 }
+
+variable "github_repo_path" {
+  type        = string
+  description = "Repository path where this project is located in GitHub"
+  default     = "laaksomavrick/devblog"
+}
