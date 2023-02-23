@@ -62,6 +62,11 @@
 
 /* HTML elements */
 
+@font-face {
+  font-family: "DM Sans";
+  src: local("DM Sans"), url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700");
+}
+
 *,
 :after,
 :before {
