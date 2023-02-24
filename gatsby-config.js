@@ -152,18 +152,18 @@ module.exports = {
       },
     },
     {
-      resolve: 'gatsby-plugin-robots-txt',
+      resolve: "gatsby-plugin-robots-txt",
       options: {
-        host: 'https://www.technoblather.ca',
+        host: "https://www.technoblather.ca",
         env: {
           development: {
-            policy: [{userAgent: '*', disallow: ['/']}]
+            policy: [{ userAgent: "*", disallow: ["/"] }],
           },
           production: {
-            policy: [{userAgent: '*', allow: '/'}]
-          }
-        }
-      }
-    }
+            policy: [{ userAgent: "*", allow: "/" }],
+          },
+        },
+      },
+    },
   ],
 }
