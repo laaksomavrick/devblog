@@ -20,7 +20,6 @@ terraform {
 module "technoblather-staging" {
   source = "../../modules/blog"
 
-  # TODO: extract to tfvars
   domain_name = "staging.technoblather.ca"
   common_tags = {
     Project     = "technoblather"

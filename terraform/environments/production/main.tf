@@ -20,7 +20,6 @@ terraform {
 module "technoblather" {
   source = "../../modules/blog"
 
-  # TODO: extract to tfvars
   domain_name  = "technoblather.ca"
   alert_emails = ["laakso.mavrick@gmail.com"]
   common_tags = {

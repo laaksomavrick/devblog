@@ -8,7 +8,7 @@ provider "aws" {
 }
 
 provider "aws" {
-  region  = "ca-central-1"
+  region = "ca-central-1"
 
   assume_role {
     role_arn = data.terraform_remote_state.infrastructure.outputs.tf_production_role_arn
