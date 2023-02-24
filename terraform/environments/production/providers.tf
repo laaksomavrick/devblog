@@ -8,7 +8,6 @@ provider "aws" {
 }
 
 provider "aws" {
-  profile = var.aws_profile
   region  = "ca-central-1"
 
   assume_role {
