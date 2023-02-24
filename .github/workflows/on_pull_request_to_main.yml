@@ -6,7 +6,7 @@ on:
 
 jobs:
   verify:
-    name: Build
+    name: Verify pull request
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
