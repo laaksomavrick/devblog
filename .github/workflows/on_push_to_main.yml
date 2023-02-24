@@ -5,7 +5,40 @@ on:
     branches: [ main ]
 
 jobs:
+  update-infrastructure:
+    defaults:
+      run:
+        working-directory: terraform/environments/production
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ vars.RUNNER_AWS_ROLE_ID }}
+          aws-region: ca-central-1
+
+      - name: Setup terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.2.0
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan -input=false -no-color -out tf.plan
+
+      - name: Terraform Apply
+        run: terraform apply -input=false tf.plan
+
   deploy-to-s3:
+    needs: update-infrastructure
     runs-on: ubuntu-latest
     permissions:
       id-token: write

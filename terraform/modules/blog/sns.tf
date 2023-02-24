@@ -1,6 +1,6 @@
 resource "aws_sns_topic" "technoblather_sns_topic_500_error_threshold_exceeded" {
   provider = aws.acm_provider
-  name     = "technoblather-500-error-threshold-exceeded"
+  name     = "${var.common_tags["Environment"]}-technoblather-500-error-threshold-exceeded"
   delivery_policy = jsonencode({
     "http" : {
       "defaultHealthyRetryPolicy" : {

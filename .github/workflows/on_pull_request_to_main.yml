@@ -6,7 +6,7 @@ on:
 
 jobs:
   verify:
-    name: Build
+    name: Verify pull request
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
@@ -19,7 +19,7 @@ jobs:
       - name: Setup terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.1.7
+          terraform_version: 1.2.0
 
       - name: Install node dependencies
         run: npm ci
@@ -28,7 +28,7 @@ jobs:
         run: npm run format:check
 
       - name: Terraform fmt
-        run: terraform fmt -check
+        run: terraform fmt -recursive -check
 
       - name: Terraform Validate
         run: terraform validate -no-color

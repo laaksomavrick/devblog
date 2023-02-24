@@ -3,7 +3,7 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
   origin {
     domain_name              = aws_s3_bucket.www_bucket.bucket_regional_domain_name
     origin_access_control_id = aws_cloudfront_origin_access_control.www_s3_origin_access_control.id
-    origin_id                = "S3-www.${var.bucket_name}"
+    origin_id                = "S3-www.${var.domain_name}"
   }
 
   enabled             = true
@@ -22,7 +22,7 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD"]
     cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-www.${var.bucket_name}"
+    target_origin_id = "S3-www.${var.domain_name}"
 
     forwarded_values {
       query_string = false
@@ -61,7 +61,7 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
 }
 
 resource "aws_cloudfront_origin_access_control" "www_s3_origin_access_control" {
-  name                              = "www-s3-origin-access-control"
+  name                              = "${var.common_tags["Environment"]}-www-s3-origin-access-control"
   description                       = ""
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
@@ -72,7 +72,7 @@ resource "aws_cloudfront_origin_access_control" "www_s3_origin_access_control" {
 resource "aws_cloudfront_distribution" "root_s3_distribution" {
   origin {
     domain_name = aws_s3_bucket.root_bucket.website_endpoint
-    origin_id   = "S3-.${var.bucket_name}"
+    origin_id   = "S3-.${var.domain_name}"
 
     # https://stackoverflow.com/a/55042824/4198382
     custom_origin_config {
@@ -92,7 +92,7 @@ resource "aws_cloudfront_distribution" "root_s3_distribution" {
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD"]
     cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-.${var.bucket_name}"
+    target_origin_id = "S3-.${var.domain_name}"
 
     forwarded_values {
       query_string = true
@@ -126,9 +126,13 @@ resource "aws_cloudfront_distribution" "root_s3_distribution" {
 }
 
 resource "aws_cloudfront_function" "add_index_cloudfront_function" {
-  name    = "add_index"
+  name    = "${var.common_tags["Environment"]}_add_index"
   runtime = "cloudfront-js-1.0"
   comment = ""
   publish = true
-  code    = file("functions/wwwAddIndex.js")
+  code    = file("${path.module}/functions/wwwAddIndex.js")
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
