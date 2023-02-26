@@ -21,9 +21,39 @@ So, I needed to decide how to support having multiple instances of my infrastruc
 
 # What my options were
 
-- Workspaces
-- Multi account AWS setup
-- Modularize + separate stacks 
+On having performed research and sleeping on it, a few viable options presented themselves:
+
+- Leveraging `terraform`'s [workspaces](https://developer.hashicorp.com/terraform/language/state/workspaces) and deploying each environment to separate AWS accounts
+- Leveraging `terraform`'s workspaces and deploying each environment to the same AWS account
+- Modularizing the configuration and deploying each environment to separate AWS accounts 
+- Modularizing the configuration and deploying each environment to the same AWS account
+
+I had to make an evaluation between using workspaces versus modules, and between deploying to one account versus multiple accounts.
+
+## Workspaces or modules?
+
+To use workspaces, I'd have to:
+- create two new workspaces: `production` and `staging`
+- migrate my existing `default` workspace to `production`
+- plumb `terraform.workspace == "production" ? something : else` for configuration differences between environments 
+- remember what environment I was in while doing development
+
+paragraph with brief overview of workspaces
+
+=> Pro: Could support two environments with one backend; would mean configuration wouldn't have to drastically differ
+=> Con: meant differences between the two environments would be a PITA; tf config not composable; what workspace you're in not explicit; one tfstate so discrete access control not possible
+
+Extracting the configuration to a module would result in:
+- Refactor the existing configuration into a module
+- Creating two new stacks referencing the module (with separate backends)
+- Migrate existing state into one of the new modules
+
+paragraph with brief overview of modules
+
+=> Pro: composable between environments; explicit when doing dev what env you're in; access control between state possible (e.g. local devs could be read-only for prod but read/write for staging)
+=> Con: remote data src required for references between environments; more work
+
+## Multi-account or single-account?
 
 # Explanation and pro/con of each
 
@@ -38,7 +68,7 @@ So, I needed to decide how to support having multiple instances of my infrastruc
 ## tf conditionals
 ## tf validations for variables
 ## state mv refactoring
-## nameserver staging hosted zone
+## nameserver staging hosted zone (DNS should live in a common project in retrospect - future refactor)
 ## extracting tfstate into projects / project structure
 ## tf remote data src
 
