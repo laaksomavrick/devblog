@@ -32,28 +32,19 @@ I had to make an evaluation between using workspaces or using modules to represe
 
 ## Workspaces or modules?
 
-### Workspaces
+While evaluating whether to use workspaces or modules, I wanted to consider a few key properties: the configurability and composability of the solution, security, the developer experience, and the amount of work involved in performing the migration.
+
+### Configuration and composability
 
 Workspaces would allow me to only configure one backend for my `terraform` stacks while still being able to have multiple running instances.
-So, in effect, `technoblather` would have one `.tfstate` file with multiple instances in it.
-The ergonomics around this were driven via `terraform`'s cli, for example: `terraform workspace list`.
-
-However, configuring differences between the two environments would become tricky (if not impossible).
-Workspaces don't facilitate any functionality for composition - the `terraform` code is necessarily identical.
-Having differences between environments would require plumbing ternaries into my configurations, for example:
+So, in effect, the remote state would be stored in a single file, containing the current state of production and staging.
+Configuration between environments would have to be done with a ternary, e.g.: 
 
 ```terraform
 some_field = terraform.workspace == "production" ? some_value : some_other_value
 ```
 
-Further, what workspace you're in while doing dev work isn't immediately apparent - it's context you have to maintain as a developer.
-And so, I knew it was only a matter of time before I'd push a change to production instead of staging while doing dev work.
-Particularly if I had stepped away from the project for a matter of months.
-
-And finally, since there is necessarily a single `.tfstate` file with workspaces, configuring access control across environments is impossible.
-The `iam` policy responsible for pushing changes up to our backend (`s3`) can't distinguish between production and staging.
-
-### Modules
+This isn't _awful_ but could get messy if we have to have lots of configuration changes between environments.
 
 Modules would allow me to compose `technoblather` into one or more discrete units of infrastructure.
 I could create a `technoblather` module, composed of `technoblather/networking`, `technoblather/monitoring`, and so on.
@@ -61,27 +52,112 @@ On a per environment basis, this would let me compose functional differences.
 Moreover, since modules allow for inputs and produce output (similar to creating classes), I could tweak the configuration for common components between environments.
 For example, if `technoblather` included `ec2`, one environment could run a `t1.micro` whereas another could run a `t2.large`.
 
-Composing environments with modules also felt more explicit.
-Two `tfstate` files were required, one for production, another for staging.
-This meant separate folders, and `cd`ing into the wrong folder was less likely (famous last words).
-Further, access control between the two environments was solvable via `iam` policies allowing permissions to read/push to one `tfstate` and not the other.
+### Security
 
-Sharing information between environments was trickier. Later on I'll detail how I solved this.
-Modules also meant more work - I had to get into the weeds of refactoring the `terraform` declarations and the live `tfstate` file.
+Using workspaces, there is necessarily a single `.tfstate` which stores the state of the infrastructure being managed.
+As a result, configuring access control between environments is impossible.
+The `iam` policy responsible for pushing changes up to our backend (`s3`) can't distinguish between production and staging since both are contained in one file.
+
+Using modules, I could create two separate `.tfstate` files for the two environments.
+This meant access control between the two environments was possible via `iam` policies allowing permissions to read/push to one `tfstate` and not the other.
+
+### Developer experience
+
+With workspaces, what workspace you're in while doing dev work isn't immediately apparent - it's context you have to maintain as a developer.
+And so, I knew it was only a matter of time before I'd push a change to production instead of staging while doing dev work.
+Particularly if I had stepped away from the project for a matter of months.
+
+With modules, I would have environments separated into folders with their respective `.tfstate`.
+So, `cd`ing into the wrong folder was less likely (famous last words).
+
+### Effort involved
+
+Using workspaces meant setting up a new workspace with `terraform` and using the `terraform state mv` command to migrate existing production resources.
+
+Using modules meant refactoring the `terraform` declarations into a module and using `terraform state mv` to migrate existing production resources.
 
 ### Decision
 
-=> conclusion, i opted for modules
-
-Given the 
+Apparent from the paragraph sizing between the pros and cons, I opted to refactor my `terraform` declarations into a module and reference this module in the environments I wanted to create.
 
 ## Multi-account or single-account?
 
-# Explanation and pro/con of each
+When evaluating whether to use a multi-account or single-account set up, some key heuristics presented themselves:
+* Security
+* Resource isolation
+* Billing
+* Developer experience
 
-# The decision made
+### Security
+
+### Resource isolation
+
+### Billing
+
+### Developer experience
+
+### Multi-account
+
+#### Pros
+* Security
+* Resource isolation (changes guaranteed won't affect another environment accidentally)
+* Billing
+#### Cons
+* High-overhead (even with AWS Organizations) to manage multiple accounts (e.g. `technoblather+staginguser@exmaple.com`)
+* Slow feedback loop (signing in and out to visualize changes and tinker) 
+
+### Single-account
+
+#### Pros
+#### Cons
+
+### Decision
+
+I concede that multi-account is a best practice when real value is on the line (e.g., running a business): it is more secure, resources are strongly isolated, and accidental cross-cutting changes are impossible.
+However, for the scope of my project (and my sanity as a solo dev), I valued the ergonomics and tighter feedback loop of using a single-account setup. 
+A more comprehensive overview is [provided by AWS](https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/benefits-of-using-multiple-aws-accounts.html) if you're curious.
 
 # A walkthrough of the implementation
+=> basically a `tree` and an explanation with a link to the repo for specifics
+
+```
+terraform
+|-- environments
+|   |-- infrastructure
+|   |   |-- iam.tf
+|   |   |-- main.tf
+|   |   |-- outputs.tf
+|   |   |-- s3.tf
+|   |   `-- variables.tf
+|   |-- production
+|   |   |-- data.tf
+|   |   |-- main.tf
+|   |   |-- migrate-to-child-module.sh
+|   |   `-- providers.tf
+|   `-- staging
+|       |-- data.tf
+|       |-- main.tf
+|       |-- outputs.tf
+|       `-- providers.tf
+`-- modules
+    `-- blog
+        |-- acm.tf
+        |-- cloudfront.tf
+        |-- cloudwatch.tf
+        |-- functions
+        |   `-- wwwAddIndex.js
+        |-- iam.tf
+        |-- main.tf
+        |-- outputs.tf
+        |-- root_bucket.tf
+        |-- route53.tf
+        |-- sns.tf
+        |-- templates
+        |   |-- s3-private-policy.json
+        |   `-- s3-public-policy.json
+        |-- variables.tf
+        `-- www_bucket.tf
+```
 
 # What does my day-to-day flow look like now?
 
