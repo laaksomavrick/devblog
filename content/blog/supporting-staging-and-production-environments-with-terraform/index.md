@@ -28,30 +28,52 @@ On having performed research and sleeping on it, a few viable options presented 
 - Modularizing the configuration and deploying each environment to separate AWS accounts 
 - Modularizing the configuration and deploying each environment to the same AWS account
 
-I had to make an evaluation between using workspaces versus modules, and between deploying to one account versus multiple accounts.
+I had to make an evaluation between using workspaces or using modules to represent a deployed instance of `technoblather`, and between deploying both environments to one account or separating the environments between accounts. 
 
 ## Workspaces or modules?
 
-To use workspaces, I'd have to:
-- create two new workspaces: `production` and `staging`
-- migrate my existing `default` workspace to `production`
-- plumb `terraform.workspace == "production" ? something : else` for configuration differences between environments 
-- remember what environment I was in while doing development
+### Workspaces
 
-paragraph with brief overview of workspaces
+Workspaces would allow me to only configure one backend for my `terraform` stacks while still being able to have multiple running instances.
+So, in effect, `technoblather` would have one `.tfstate` file with multiple instances in it.
+The ergonomics around this were driven via `terraform`'s cli, for example: `terraform workspace list`.
 
-=> Pro: Could support two environments with one backend; would mean configuration wouldn't have to drastically differ
-=> Con: meant differences between the two environments would be a PITA; tf config not composable; what workspace you're in not explicit; one tfstate so discrete access control not possible
+However, configuring differences between the two environments would become tricky (if not impossible).
+Workspaces don't facilitate any functionality for composition - the `terraform` code is necessarily identical.
+Having differences between environments would require plumbing ternaries into my configurations, for example:
 
-Extracting the configuration to a module would result in:
-- Refactor the existing configuration into a module
-- Creating two new stacks referencing the module (with separate backends)
-- Migrate existing state into one of the new modules
+```terraform
+some_field = terraform.workspace == "production" ? some_value : some_other_value
+```
 
-paragraph with brief overview of modules
+Further, what workspace you're in while doing dev work isn't immediately apparent - it's context you have to maintain as a developer.
+And so, I knew it was only a matter of time before I'd push a change to production instead of staging while doing dev work.
+Particularly if I had stepped away from the project for a matter of months.
 
-=> Pro: composable between environments; explicit when doing dev what env you're in; access control between state possible (e.g. local devs could be read-only for prod but read/write for staging)
-=> Con: remote data src required for references between environments; more work
+And finally, since there is necessarily a single `.tfstate` file with workspaces, configuring access control across environments is impossible.
+The `iam` policy responsible for pushing changes up to our backend (`s3`) can't distinguish between production and staging.
+
+### Modules
+
+Modules would allow me to compose `technoblather` into one or more discrete units of infrastructure.
+I could create a `technoblather` module, composed of `technoblather/networking`, `technoblather/monitoring`, and so on.
+On a per environment basis, this would let me compose functional differences.
+Moreover, since modules allow for inputs and produce output (similar to creating classes), I could tweak the configuration for common components between environments.
+For example, if `technoblather` included `ec2`, one environment could run a `t1.micro` whereas another could run a `t2.large`.
+
+Composing environments with modules also felt more explicit.
+Two `tfstate` files were required, one for production, another for staging.
+This meant separate folders, and `cd`ing into the wrong folder was less likely (famous last words).
+Further, access control between the two environments was solvable via `iam` policies allowing permissions to read/push to one `tfstate` and not the other.
+
+Sharing information between environments was trickier. Later on I'll detail how I solved this.
+Modules also meant more work - I had to get into the weeds of refactoring the `terraform` declarations and the live `tfstate` file.
+
+### Decision
+
+=> conclusion, i opted for modules
+
+Given the 
 
 ## Multi-account or single-account?
 
