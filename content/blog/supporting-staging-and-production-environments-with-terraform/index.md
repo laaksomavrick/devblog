@@ -174,17 +174,11 @@ The state files are all stored in the same `s3` bucket with a distinct file name
 # terraform/environments/infrastructure/main.tf
 
 terraform {
-  
-  ...
-
   backend "s3" {
     bucket         = "technoblather-terraform-states"
     key            = "infrastructure.tfstate"
     region         = "ca-central-1"
   }
-
-  ...
-
 }
 ```
 
@@ -232,10 +226,7 @@ For example, in the `blog` module that provisions technoblather, the "constructo
 
 module "technoblather-staging" {
   source = "../../modules/blog"
-
   domain_name = "staging.technoblather.ca"
-  
-  ...
 }
 ```
 
@@ -254,12 +245,89 @@ output "aws_route53_zone_name_servers" {
 
 This allowed referencing components in the infrastructure similar to how a "getter" on a class would allow reading a private property.
 
-## Terraform can leverage simple logic
+## Leveraging simple logic for conditionally provisioning resources
 
-## tf validations for variables
-## state mv refactoring
+Sometimes we want to provision different resources or configure the same resources differently between environments.
+For example, we may not care to monitor our staging environment for uptime or want to provision less expensive resources.
+One way of achieving this is composing child modules and allowing their variables to configure these properties.
+However, for small changes, that can be a lot of work, particularly for already deployed resources (i.e., having to migrate all the pre-existing state).
+An alternative exists that is more "light weight" for smaller differences using the `count` property in `terraform`:
+
+```terraform
+# terraform/modules/blog/iam.tf
+
+resource "aws_iam_openid_connect_provider" "github_provider" {
+  count = var.common_tags["Environment"] == "production" ? 1 : 0
+  url   = "https://token.actions.githubusercontent.com"
+
+  client_id_list = ["sts.amazonaws.com"]
+
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+}
+```
+
+Here, if the environment is `production`, we conditionally provision a resource. 
+
+## Variable validations
+
+`terraform` offers functionality to validate variables.
+Combined with modules, this allows for safe configuration differences via constraining strings to a known set.
+For example, I wanted to write conditions for some resources based on the environment - whether the stack was staging or production.
+Adding validations granted me certainty that the environment variable will be one of those two values:
+
+```terraform
+# terraform/modules/blog/variables.tf
+
+variable "common_tags" {
+  description = "Common tags you want applied to all components."
+  
+  type = object({
+    Project     = string
+    Environment = string
+  })
+
+  validation {
+    condition     = var.common_tags["Environment"] == "production" || var.common_tags["Environment"] == "staging"
+    error_message = "Environment must be either 'staging' or 'production'"
+  }
+}
+```
+
+## Refactoring existing state
+
+As mentioned, already provisioned resources can be refactoring using `moved` blocks for non-breaking changes and `state mv` for breaking changes.
+
+## Data can be shared across stacks
+
+Outputs can be shared across separate `terraform` stacks via the `data` property declaration.
+This meant I was able to share data between separately managed `terraform` stacks.
+This facilitated having a "common" set of infrastructure each of my environments could consume for environment agnostic concerns, e.g. `iam` roles.
+
+```terraform
+# terraform/environments/production/data.tf
+data "terraform_remote_state" "infrastructure" {
+  backend = "s3"
+  config = {
+    bucket = "technoblather-terraform-states"
+    key    = "infrastructure.tfstate"
+    region = "ca-central-1"
+  }
+}
+```
+
+```terraform
+# terraform/environments/production/providers.tf
+provider "aws" {
+  region = "ca-central-1"
+
+  assume_role {
+    role_arn = data.terraform_remote_state.infrastructure.outputs.tf_production_role_arn
+  }
+}
+```
+
 ## "common" project / nameserver staging hosted zone (DNS should live in a common project in retrospect - future refactor)
-## extracting tfstate into projects / project structure / using multiple tf states
-## tf remote data src
+
+leveraging a common stack for shared resources; in retrospect should have stuck dns in there given count and remote data src wankery being kludgy - future refactor 
 
 
