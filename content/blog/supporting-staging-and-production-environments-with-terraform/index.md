@@ -13,8 +13,8 @@ As such, it's common to require a _staging_ environment to complement a _product
 
 Technoblather was initially built as one `terraform` stack serving as its production environment.
 Given it's live and user-facing, I wanted to be able to continue to use it as a project for tinkering and learning `aws` and `terraform` without potentially impacting users.
-Further, refactoring already-deployed infrastructure served as a good opportunity to learn - this task could happen in real-world operational work.
-So, I needed to refactor my infrastructure-as-code configuration to facilitate two stacks for the same configuration: one for production, and one for staging.
+Further, refactoring already-deployed infrastructure served as a good opportunity to learn - this task mimics real-world operational work.
+So, I wanted to refactor my infrastructure-as-code configuration to facilitate two stacks for the same configuration: one for production, and one for staging.
 You can take a peek at the final result [here](https://www.staging.technoblather.ca).
 
 Two major hurdles presented themselves: I already had a live `terraform` stack with [state](https://developer.hashicorp.com/terraform/language/state), and my `terraform` declarations assumed a single environment.
@@ -123,6 +123,8 @@ A more comprehensive overview of multi-account setups is [provided by AWS](https
 
 # A brief overview of the end result
 
+## How I supported multiple environments for the same project
+
 Prior to refactoring, my `terraform` declarations all lived in a single folder.
 Modularizing the `terraform` declarations allowed me to split up my environments into separate folders.
 Full details can be found in [technoblather's github repository](https://github.com/laaksomavrick/devblog).
@@ -165,10 +167,54 @@ terraform
         `-- www_bucket.tf
 ```
 
-The `environments` folder contains deployed environments, each subfolder having its own `terraform` state.
-`production` and `staging` are self-explanatory, and `infrastructure` provides common `aws` components for usage in both (like a `common` folder in a codebase of subprojects).
+The `environments` folder contains deployed environments with each subfolder having its own `terraform` state.
+The state files are all stored in the same `s3` bucket with a distinct file name, e.g.:
+
+```terraform
+# terraform/environments/infrastructure/main.tf
+
+terraform {
+  
+  ...
+
+  backend "s3" {
+    bucket         = "technoblather-terraform-states"
+    key            = "infrastructure.tfstate"
+    region         = "ca-central-1"
+  }
+
+  ...
+
+}
+```
+
+The `production` and `staging` stacks are self-explanatory, and `infrastructure` provides common `aws` components for usage in both (like a `common` folder in a codebase of subprojects).
 For the moment, I only extracted `technoblather` into its own module. 
 If need arose, I could extract this further into subcomponents (e.g. `technoblather/networking`, `technoblather/static-site`, etc.)
+
+## How I migrated the existing infrastructure to the new configuration
+
+In my original setup, one `default.tfstate` existed which represented the state for the already deployed infrastructure.
+I wanted to migrate this to be the `production.tfstate` and create additional terraform stacks as required.
+Since the blog was extracted to a module and would be managed by a new stack, each previously deployed resource would have to be "namespaced" differently in the state file.
+For example, `aws.foo` had to become `module.technoblather.aws.foo`
+
+Two mechanisms existed for this: using the [refactoring](https://developer.hashicorp.com/terraform/language/modules/develop/refactoring) capabilities or using the [state mv](https://developer.hashicorp.com/terraform/cli/commands/state/mv) command (similar to [importing](https://developer.hashicorp.com/terraform/cli/import)).
+If technoblather were shared amongst an organization, using the `moved` blocks offered by the refactoring utilities would ensure no breaking changes.
+However, since I am a solo dev on this project, being able to mutate the state file was viable and meant I wouldn't litter my configuration with several `moved { ... }` blocks.
+So, I wrote a small script to iterate over each resource and modify it appropriately:
+
+```shell
+RESOURCES="$(terraform state list)"
+
+echo "$RESOURCES" | while read line ; do
+   OLD_RESOURCE_STATE=$line
+   NEW_RESOURCE_STATE=module.technoblather."$line"
+   terraform state mv "$OLD_RESOURCE_STATE" "$NEW_RESOURCE_STATE"
+done
+```
+
+Then, I renamed and moved the file in `s3` and modified the `backend` configuration for my `production` stack to point towards it.
 
 # What I learned
 
