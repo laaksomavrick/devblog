@@ -11,8 +11,9 @@ This can be done locally, but our laptops and our user-serving environments gene
 Further, it's advisable to not impact user-serving environments by validating changes on them.
 As such, it's common to require a _staging_ environment to complement a _production_ environment.
 
-Technoblather was initially built as one `terraform` stack serving as it's production environment.
-Given it's live and user-facing, I wanted to be able to continue use it as a project for tinkering and learning without potentially impacting users on the blog.
+Technoblather was initially built as one `terraform` stack serving as its production environment.
+Given it's live and user-facing, I wanted to be able to continue to use it as a project for tinkering and learning `aws` and `terraform` without potentially impacting users.
+Further, refactoring already-deployed infrastructure served as a good opportunity to learn - this task could happen in real-world operational work.
 So, I needed to refactor my infrastructure-as-code configuration to facilitate two stacks for the same configuration: one for production, and one for staging.
 You can take a peek at the final result [here](https://www.staging.technoblather.ca).
 
@@ -32,7 +33,11 @@ I had to make an evaluation between using workspaces or using modules to represe
 
 ## Workspaces or modules?
 
-While evaluating whether to use workspaces or modules, I wanted to consider a few key properties: the configurability and composability of the solution, security, the developer experience, and the amount of work involved in performing the migration.
+While evaluating whether to use workspaces or modules, some key points of comparisons emerged: 
+* the configurability and composability of the solution
+* security
+* the developer experience
+* the amount of work involved in performing the migration.
 
 ### Configuration and composability
 
@@ -78,47 +83,49 @@ Using modules meant refactoring the `terraform` declarations into a module and u
 
 ### Decision
 
-Apparent from the paragraph sizing between the pros and cons, I opted to refactor my `terraform` declarations into a module and reference this module in the environments I wanted to create.
+I opted to refactor my `terraform` declarations into a module and reference this module in the environments I wanted to create.
+Using modules seemed to provide the best learning experience for myself while also solving both my immediate problem and the future problems I'll have while developing technoblather further.
 
 ## Multi-account or single-account?
 
-When evaluating whether to use a multi-account or single-account set up, some key heuristics presented themselves:
+Likewise, while evaluating whether to use a multi-account or single-account set up, some key points of comparisons emerged:
 * Security
-* Resource isolation
 * Billing
 * Developer experience
 
 ### Security
 
-### Resource isolation
+Having components operating in separate accounts nigh guarantees that an unwitting `iam` change won't have the side effect of exposing resources that ought not be exposed.
+Similarly, applying distinct security controls can be simplified by using multiple accounts.
+Further, an administrator can set up [service control policies](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html) to create guard rails for child accounts in an [AWS Organizations](https://aws.amazon.com/organizations/).
+
+However, single-accounts can still leverage roles, groups, and users via `iam` to restrict or permit permissions to resources.
 
 ### Billing
 
+Accounts are the default catch-all "bucket" whereby costs are billed.
+Using separate accounts bypasses the common confusion around cloud spend - it's obvious that a particular environment relates to a particular cloud spend.
+A single account can emulate this behaviour with a consistent tagging scheme (e.g. `project => technoblather`) _but_ that requires maintenance and vigilance.
+
 ### Developer experience
 
-### Multi-account
+Multi-account setups have a high level of overhead, even after leveraging something like [AWS Organizations](https://aws.amazon.com/organizations/).
+Particularly as a solo-dev working on a hobby project, having to manage multiple fake emails (`technoblather+staging@example.com`, ...) since AWS accounts necessarily must have a unique email wasn't ideal.
+Moreover, having to swap between accounts to debug or explore was unnecessary friction, particularly since I use two-factor authentication for anything that has a credit card associated with it.
 
-#### Pros
-* Security
-* Resource isolation (changes guaranteed won't affect another environment accidentally)
-* Billing
-#### Cons
-* High-overhead (even with AWS Organizations) to manage multiple accounts (e.g. `technoblather+staginguser@exmaple.com`)
-* Slow feedback loop (signing in and out to visualize changes and tinker) 
-
-### Single-account
-
-#### Pros
-#### Cons
+Single-account thus won out here - you sign into the account and that's all there is to it. Swapping between IAM roles in a single account is seamless in comparison.
 
 ### Decision
 
-I concede that multi-account is a best practice when real value is on the line (e.g., running a business): it is more secure, resources are strongly isolated, and accidental cross-cutting changes are impossible.
+I concede that multi-account is a best practice when real value is on the line (e.g., running a business): it is more secure, it scales better across humans and teams, resources are strongly isolated, and accidental cross-cutting changes are impossible.
 However, for the scope of my project (and my sanity as a solo dev), I valued the ergonomics and tighter feedback loop of using a single-account setup. 
-A more comprehensive overview is [provided by AWS](https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/benefits-of-using-multiple-aws-accounts.html) if you're curious.
+A more comprehensive overview of multi-account setups is [provided by AWS](https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/benefits-of-using-multiple-aws-accounts.html) if you're curious.
 
-# A walkthrough of the implementation
-=> basically a `tree` and an explanation with a link to the repo for specifics
+# A brief overview of the end result
+
+Prior to refactoring, my `terraform` declarations all lived in a single folder.
+Modularizing the `terraform` declarations allowed me to split up my environments into separate folders.
+Full details can be found in [technoblather's github repository](https://github.com/laaksomavrick/devblog).
 
 ```
 terraform
@@ -132,7 +139,6 @@ terraform
 |   |-- production
 |   |   |-- data.tf
 |   |   |-- main.tf
-|   |   |-- migrate-to-child-module.sh
 |   |   `-- providers.tf
 |   `-- staging
 |       |-- data.tf
@@ -159,7 +165,9 @@ terraform
         `-- www_bucket.tf
 ```
 
-# What does my day-to-day flow look like now?
+The `environments` folder contains deployed environments, each subfolder having its own `terraform` state.
+`production` and `staging` are self-explanatory, and `infrastructure` provides common `aws` components for usage in both (like a `common` folder in a codebase of subprojects).
+For the moment, I only extracted `technoblather` into its own module. If need arose, I could extract this further into subcomponents (e.g. `technoblather/networking`, `technoblather/static-site`, etc.)
 
 # Gotchas / things of note / things I learned
 ## tf modules (relate to classes and objects from programmer pov)
