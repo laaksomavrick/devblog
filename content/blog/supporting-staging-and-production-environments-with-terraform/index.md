@@ -167,15 +167,53 @@ terraform
 
 The `environments` folder contains deployed environments, each subfolder having its own `terraform` state.
 `production` and `staging` are self-explanatory, and `infrastructure` provides common `aws` components for usage in both (like a `common` folder in a codebase of subprojects).
-For the moment, I only extracted `technoblather` into its own module. If need arose, I could extract this further into subcomponents (e.g. `technoblather/networking`, `technoblather/static-site`, etc.)
+For the moment, I only extracted `technoblather` into its own module. 
+If need arose, I could extract this further into subcomponents (e.g. `technoblather/networking`, `technoblather/static-site`, etc.)
 
-# Gotchas / things of note / things I learned
-## tf modules (relate to classes and objects from programmer pov)
-## tf conditionals
+# What I learned
+
+## Modules are like classes
+
+Coming from a development background, `terraform` modules map well to classes in object oriented programming.
+Extracting a module results in an encapsulation of state and data for a particular set of infrastructure components.
+We can provide inputs to configure the module and consume outputs which lets us create public APIs for usage in other pieces of our infrastructure.
+This lets us build up a set of building blocks of abstractions that can be used across an organization or team.
+
+For example, in the `blog` module that provisions technoblather, the "constructor" allows for configuring the domain name: 
+
+```terraform
+# terraform/environments/staging/main.tf
+
+module "technoblather-staging" {
+  source = "../../modules/blog"
+
+  domain_name = "staging.technoblather.ca"
+  
+  ...
+}
+```
+
+This DRYs up our infrastructure declarations since the behaviours surrounding provisioning DNS are encapsulated in the module.
+
+Further, the `staging` module's output provides a public API to consume the name servers associated with its domain:
+
+```terraform
+# terraform/environments/staging/outputs.tf
+
+output "aws_route53_zone_name_servers" {
+  description = "Name servers for route53 hosted zone"
+  value       = module.technoblather-staging.aws_route53_zone_name_servers
+}
+```
+
+This allowed referencing components in the infrastructure similar to how a "getter" on a class would allow reading a private property.
+
+## Terraform can leverage simple logic
+
 ## tf validations for variables
 ## state mv refactoring
-## nameserver staging hosted zone (DNS should live in a common project in retrospect - future refactor)
-## extracting tfstate into projects / project structure
+## "common" project / nameserver staging hosted zone (DNS should live in a common project in retrospect - future refactor)
+## extracting tfstate into projects / project structure / using multiple tf states
 ## tf remote data src
 
 
