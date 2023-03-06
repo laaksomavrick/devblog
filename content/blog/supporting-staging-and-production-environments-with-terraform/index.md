@@ -1,7 +1,7 @@
 ---
 title: Supporting Staging and Production Environments With Terraform 
 date: "2023-02-08T00:00:00.000Z"
-description: Use modules to DRY up your infrastructure-as-code configuration to support multiple environments.
+description: Use modules to DRY up your infrastructure-as-code configuration in order to support multiple environments.
 ---
 
 # What I wanted to do
@@ -9,27 +9,27 @@ description: Use modules to DRY up your infrastructure-as-code configuration to 
 When developing software, it's a good practice to test your changes before releasing them to users.
 This can be done locally, but our laptops and our user-serving environments generally differ dramatically.
 Further, it's advisable to not impact user-serving environments by validating changes on them.
-As such, it's common to require a _staging_ environment to complement a _production_ environment.
+As such, it's common to require a _staging_ environment to complement a _production_ environment to validate changes before they're deployed to users.
 
-Technoblather was initially built as one `terraform` stack serving as its production environment.
-Given it's live and user-facing, I wanted to be able to continue to use it as a project for tinkering and learning `aws` and `terraform` without potentially impacting users.
+Technoblather was initially built as one terraform stack serving as its production environment.
+Given it's live and user-facing, I wanted to be able to continue to use it as a project for tinkering and learning AWS and terraform without potentially impacting users.
 Further, refactoring already-deployed infrastructure served as a good opportunity to learn - this task mimics real-world operational work.
 So, I wanted to refactor my infrastructure-as-code configuration to facilitate two stacks for the same configuration: one for production, and one for staging.
 You can take a peek at the final result [here](https://www.staging.technoblather.ca).
 
-Two major hurdles presented themselves: I already had a live `terraform` stack with [state](https://developer.hashicorp.com/terraform/language/state), and my `terraform` declarations assumed a single environment.
-So, I needed to decide how to support having multiple instances of my infrastructure deployed and managed by `terraform`, and devise a plan to migrate my existing `terraform` stack accordingly.
+Two major hurdles presented themselves: I already had a live terraform stack with [state](https://developer.hashicorp.com/terraform/language/state), and my terraform declarations assumed a single environment.
+So, I needed to decide how to support having multiple instances of my infrastructure deployed and managed by terraform, and devise a plan to migrate my existing terraform stack accordingly.
 
 # What my options were
 
 On having performed research and sleeping on it, a few viable options presented themselves:
 
-- Leveraging `terraform`'s [workspaces](https://developer.hashicorp.com/terraform/language/state/workspaces) and deploying each environment to separate AWS accounts
-- Leveraging `terraform`'s workspaces and deploying each environment to the same AWS account
+- Leveraging terraform's [workspaces](https://developer.hashicorp.com/terraform/language/state/workspaces) and deploying each environment to separate AWS accounts
+- Leveraging terraform's workspaces and deploying each environment to the same AWS account
 - Modularizing the configuration and deploying each environment to separate AWS accounts 
 - Modularizing the configuration and deploying each environment to the same AWS account
 
-I had to make an evaluation between using workspaces or using modules to represent a deployed instance of `technoblather`, and between deploying both environments to one account or separating the environments between accounts. 
+I had to make an evaluation between using workspaces or using modules to represent a deployed instance of technoblather, and between deploying both environments to one account or separating the environments between accounts. 
 
 ## Workspaces or modules?
 
@@ -41,7 +41,7 @@ While evaluating whether to use workspaces or modules, some key points of compar
 
 ### Configuration and composability
 
-Workspaces would allow me to only configure one backend for my `terraform` stacks while still being able to have multiple running instances.
+Workspaces would allow me to only configure one backend for my terraform stacks while still being able to have multiple running instances.
 So, in effect, the remote state would be stored in a single file, containing the current state of production and staging.
 Configuration between environments would have to be done with a ternary, e.g.: 
 
@@ -51,20 +51,20 @@ some_field = terraform.workspace == "production" ? some_value : some_other_value
 
 This isn't _awful_ but could get messy if we have to have lots of configuration changes between environments.
 
-Modules would allow me to compose `technoblather` into one or more discrete units of infrastructure.
-I could create a `technoblather` module, composed of `technoblather/networking`, `technoblather/monitoring`, and so on.
+Modules would allow me to compose technoblather into one or more discrete units of infrastructure.
+I could create a technoblather module, composed of `technoblather/networking`, `technoblather/monitoring`, and so on.
 On a per environment basis, this would let me compose functional differences.
 Moreover, since modules allow for inputs and produce output (similar to creating classes), I could tweak the configuration for common components between environments.
-For example, if `technoblather` included `ec2`, one environment could run a `t1.micro` whereas another could run a `t2.large`.
+For example, if technoblather included EC2 instances, one environment could run a `t1.micro` whereas another could run a `t2.large`.
 
 ### Security
 
 Using workspaces, there is necessarily a single `.tfstate` which stores the state of the infrastructure being managed.
 As a result, configuring access control between environments is impossible.
-The `iam` policy responsible for pushing changes up to our backend (`s3`) can't distinguish between production and staging since both are contained in one file.
+The AWS IAM policy responsible for pushing changes up to our backend (S3) can't distinguish between production and staging since both are contained in one file.
 
 Using modules, I could create two separate `.tfstate` files for the two environments.
-This meant access control between the two environments was possible via `iam` policies allowing permissions to read/push to one `tfstate` and not the other.
+This meant access control between the two environments was possible via AWS IAM policies allowing permissions to read/push to one `.tfstate` and not the other.
 
 ### Developer experience
 
@@ -77,13 +77,13 @@ So, `cd`ing into the wrong folder was less likely (famous last words).
 
 ### Effort involved
 
-Using workspaces meant setting up a new workspace with `terraform` and using the `terraform state mv` command to migrate existing production resources.
+Using workspaces meant setting up a new workspace with terraform and using the `terraform state mv` command to migrate existing production resources.
 
-Using modules meant refactoring the `terraform` declarations into a module and using `terraform state mv` to migrate existing production resources.
+Using modules meant refactoring the terraform declarations into a module and using `terraform state mv` to migrate existing production resources.
 
 ### Decision
 
-I opted to refactor my `terraform` declarations into a module and reference this module in the environments I wanted to create.
+I opted to refactor my terraform declarations into a module and reference this module in the environments I wanted to create.
 Using modules seemed to provide the best learning experience for myself while also solving both my immediate problem and the future problems I'll have while developing technoblather further.
 
 ## Multi-account or single-account?
@@ -95,11 +95,11 @@ Likewise, while evaluating whether to use a multi-account or single-account set 
 
 ### Security
 
-Having components operating in separate accounts nigh guarantees that an unwitting `iam` change won't have the side effect of exposing resources that ought not be exposed.
+Having components operating in separate accounts nigh guarantees that an unwitting AWS IAM change won't have the side effect of exposing resources that ought not be exposed.
 Similarly, applying distinct security controls can be simplified by using multiple accounts.
 Further, an administrator can set up [service control policies](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html) to create guard rails for child accounts in an [AWS Organizations](https://aws.amazon.com/organizations/).
 
-However, single-accounts can still leverage roles, groups, and users via `iam` to restrict or permit permissions to resources.
+However, single-accounts can still leverage roles, groups, and users via AWS IAM to restrict or permit permissions to resources.
 
 ### Billing
 
@@ -125,8 +125,8 @@ A more comprehensive overview of multi-account setups is [provided by AWS](https
 
 ## How I supported multiple environments for the same project
 
-Prior to refactoring, my `terraform` declarations all lived in a single folder.
-Modularizing the `terraform` declarations allowed me to split up my environments into separate folders.
+Prior to refactoring, my terraform declarations all lived in a single folder.
+Modularizing the terraform declarations allowed me to split up my environments into separate folders.
 Full details can be found in [technoblather's github repository](https://github.com/laaksomavrick/devblog).
 
 ```
@@ -167,8 +167,8 @@ terraform
         `-- www_bucket.tf
 ```
 
-The `environments` folder contains deployed environments with each subfolder having its own `terraform` state.
-The state files are all stored in the same `s3` bucket with a distinct file name, e.g.:
+The `environments` folder contains deployed environments with each subfolder having its own terraform state.
+The state files are all stored in the same S3 bucket with a distinct file name, e.g.:
 
 ```terraform
 # terraform/environments/infrastructure/main.tf
@@ -182,8 +182,8 @@ terraform {
 }
 ```
 
-The `production` and `staging` stacks are self-explanatory, and `infrastructure` provides common `aws` components for usage in both (like a `common` folder in a codebase of subprojects).
-For the moment, I only extracted `technoblather` into its own module. 
+The `production` and `staging` stacks are self-explanatory, and `infrastructure` provides common AWS components for usage in both (like a `common` folder in a codebase of subprojects).
+For the moment, I only extracted technoblather into its own module. 
 If need arose, I could extract this further into subcomponents (e.g. `technoblather/networking`, `technoblather/static-site`, etc.)
 
 ## How I migrated the existing infrastructure to the new configuration
@@ -208,13 +208,13 @@ echo "$RESOURCES" | while read line ; do
 done
 ```
 
-Then, I renamed and moved the file in `s3` and modified the `backend` configuration for my `production` stack to point towards it.
+Then, I renamed and moved the file in S3 and modified the `backend` configuration for my `production` stack to point towards it.
 
 # What I learned
 
 ## Modules are like classes
 
-Coming from a development background, `terraform` modules map well to classes in object oriented programming.
+Coming from a development background, terraform modules map well to classes in object oriented programming.
 Extracting a module results in an encapsulation of state and data for a particular set of infrastructure components.
 We can provide inputs to configure the module and consume outputs which lets us create public APIs for usage in other pieces of our infrastructure.
 This lets us build up a set of building blocks of abstractions that can be used across an organization or team.
@@ -232,7 +232,7 @@ module "technoblather-staging" {
 
 This DRYs up our infrastructure declarations since the behaviours surrounding provisioning DNS are encapsulated in the module.
 
-Further, the `staging` module's output provides a public API to consume the name servers associated with its domain:
+Further, the `staging` stack's output provides a public API to consume the name servers associated with its domain:
 
 ```terraform
 # terraform/environments/staging/outputs.tf
@@ -251,7 +251,7 @@ Sometimes we want to provision different resources or configure the same resourc
 For example, we may not care to monitor our staging environment for uptime or want to provision less expensive resources.
 One way of achieving this is composing child modules and allowing their variables to configure these properties.
 However, for small changes, that can be a lot of work, particularly for already deployed resources (i.e., having to migrate all the pre-existing state).
-An alternative exists that is more "light weight" for smaller differences using the `count` property in `terraform`:
+An alternative exists that is more "light weight" for smaller differences using the `count` property in terraform:
 
 ```terraform
 # terraform/modules/blog/iam.tf
@@ -270,7 +270,7 @@ Here, if the environment is `production`, we conditionally provision a resource.
 
 ## Variable validations
 
-`terraform` offers functionality to validate variables.
+terraform offers functionality to validate variables.
 Combined with modules, this allows for safe configuration differences via constraining strings to a known set.
 For example, I wanted to write conditions for some resources based on the environment - whether the stack was staging or production.
 Adding validations granted me certainty that the environment variable will be one of those two values:
@@ -299,9 +299,9 @@ As mentioned, already provisioned resources can be refactoring using `moved` blo
 
 ## Data can be shared across stacks
 
-Outputs can be shared across separate `terraform` stacks via the `data` property declaration.
-This meant I was able to share data between separately managed `terraform` stacks.
-This facilitated having a "common" set of infrastructure each of my environments could consume for environment agnostic concerns, e.g. `iam` roles.
+Outputs can be shared across separate terraform stacks via the `data` property declaration.
+This meant I was able to share data between separately managed terraform stacks.
+This facilitated having a "common" set of infrastructure each of my environments could consume for environment agnostic concerns, e.g. AWS IAM roles.
 
 ```terraform
 # terraform/environments/production/data.tf
@@ -326,8 +326,50 @@ provider "aws" {
 }
 ```
 
-## "common" project / nameserver staging hosted zone (DNS should live in a common project in retrospect - future refactor)
+## Addressing cross-cutting concerns between environments
 
-leveraging a common stack for shared resources; in retrospect should have stuck dns in there given count and remote data src wankery being kludgy - future refactor 
+This isn't about a feature or the mechanics of terraform, but creating a "shared" or "common" infrastructure stack is a useful technique I'll keep in mind for future work.
+This idea maps well to sharing a common library of business logic and utilities in a multi-service software architecture.
+Some resources lend themselves to being centralized and shared to consumers, such as DNS and AWS IAM resources.
+While setting up technoblather, I had originally set up a hosted zone and DNS records in the production stack.
+Thus, these resources also existed in the module that was extracted.
+Duplicating these resources in the staging stack didn't make sense - the staging domain is a subdomain of the production DNS entries.
+If I had extracted DNS into a common stack, I wouldn't have had to do the dance I ended up performing to plumb the staging subdomain into the production stack.
+In retrospect, this would be a good refactor for a future date.
+
+```terraform
+# terraform/environments/staging/outputs.tf
+
+output "aws_route53_zone_name_servers" {
+  description = "Name servers for route53 hosted zone"
+  value       = module.technoblather-staging.aws_route53_zone_name_servers
+}
+```
+
+```terraform
+# terraform/environments/production/main.tf
+
+module "technoblather" {
+  source = "../../modules/blog"
+
+  staging_name_servers = data.terraform_remote_state.technoblather-staging.outputs.aws_route53_zone_name_servers
+}
+```
+
+```terraform
+# terraform/modules/blog/route53.tf
+
+resource "aws_route53_record" "staging" {
+  count           = var.common_tags["Environment"] == "production" ? 1 : 0
+  allow_overwrite = true
+  name            = "staging.${var.domain_name}"
+  ttl             = 172800
+  type            = "NS"
+  zone_id         = aws_route53_zone.main.zone_id
+
+  records = var.staging_name_servers
+}
+```
+
 
 
