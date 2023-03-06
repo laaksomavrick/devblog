@@ -46,7 +46,7 @@ Workspaces would allow me to only configure one backend for the terraform stacks
 So, in effect, the remote state would be stored in a single file, containing the current state of production and staging.
 Configuration between environments in the declarations would have to be done with a ternary, e.g.:
 
-```terraform
+```hcl
 some_field = terraform.workspace == "production" ? some_value : some_other_value
 ```
 
@@ -127,9 +127,9 @@ I concede that multi-account is a best practice when real value is on the line (
 However, for the scope of my project (and my sanity as a solo dev), I valued the ergonomics and tighter feedback loop of using a single-account setup.
 A more comprehensive overview of multi-account setups is [provided by AWS](https://docs.aws.amazon.com/whitepapers/latest/organizing-your-aws-environment/benefits-of-using-multiple-aws-accounts.html) and is a topic I'd like to explore further in the future.
 
-# A brief overview of the end result
+# Results
 
-## How I supported multiple environments for the same project
+## Supporting multiple environments
 
 Prior to refactoring, the terraform declarations all lived in a single folder.
 Modularizing the terraform declarations allowed me to split up my environments into separate folders.
@@ -176,7 +176,7 @@ terraform
 The `environments` folder contains deployed environments with each subfolder having its own terraform state.
 The state files are all stored in the same S3 bucket with distinct file names, e.g.:
 
-```terraform
+```hcl
 # terraform/environments/infrastructure/main.tf
 
 terraform {
@@ -192,7 +192,7 @@ The `production` and `staging` stacks are self-explanatory, and `infrastructure`
 For the moment, I only extracted technoblather into its own module.
 If need arose, I could extract this further into subcomponents (e.g. `technoblather/networking`, `technoblather/static-site`, etc.)
 
-## How I migrated the existing infrastructure to the new configuration
+## Migrating the existing infrastructure
 
 In the original setup, one `default.tfstate` existed which represented the state for the already deployed infrastructure.
 I wanted to migrate this to be the `production.tfstate` and create additional terraform stacks as required.
@@ -216,7 +216,7 @@ done
 
 Then, I renamed and moved the file in S3 and modified the `backend` configuration for my `production` stack to point towards it.
 
-# What I learned
+# TIL
 
 ## Modules are like classes
 
@@ -227,7 +227,7 @@ This lets us build up a set of building blocks of abstractions that can be used 
 
 For example, in the `blog` module that provisions technoblather, the "constructor" allows for configuring the domain name:
 
-```terraform
+```hcl
 # terraform/environments/staging/main.tf
 
 module "technoblather-staging" {
@@ -240,7 +240,7 @@ This DRYs up our infrastructure declarations since the behaviours surrounding pr
 
 Further, the `staging` stack's output provides a public API to consume the name servers associated with its domain:
 
-```terraform
+```hcl
 # terraform/environments/staging/outputs.tf
 
 output "aws_route53_zone_name_servers" {
@@ -259,7 +259,7 @@ One way of achieving this is composing child modules and allowing their variable
 However, for small changes, that can be a lot of work, particularly for already deployed resources (i.e., having to migrate all the pre-existing state).
 An alternative exists that is more "light weight" for smaller differences using the `count` property in terraform:
 
-```terraform
+```hcl
 # terraform/modules/blog/iam.tf
 
 resource "aws_iam_openid_connect_provider" "github_provider" {
@@ -279,7 +279,7 @@ Combined with modules, this allows for safe configuration differences via constr
 For example, I wanted to write conditions for some resources based on the environment - whether the stack was staging or production.
 Adding validations granted me certainty that the environment variable will be one of those two values:
 
-```terraform
+```hcl
 # terraform/modules/blog/variables.tf
 
 variable "common_tags" {
@@ -307,7 +307,7 @@ Outputs can be shared across separate terraform stacks via the `data` property d
 This meant I was able to share data between separately managed terraform stacks.
 This facilitated having a "common" set of infrastructure each of my environments could consume for environment agnostic concerns, for example, AWS IAM roles.
 
-```terraform
+```hcl
 # terraform/environments/production/data.tf
 
 data "terraform_remote_state" "infrastructure" {
@@ -320,7 +320,7 @@ data "terraform_remote_state" "infrastructure" {
 }
 ```
 
-```terraform
+```hcl
 # terraform/environments/production/providers.tf
 
 provider "aws" {
@@ -345,7 +345,7 @@ Duplicating these resources in the staging stack didn't make sense - the staging
 If I had extracted DNS into a common stack, I wouldn't have had to do the dance I ended up performing to plumb the staging subdomain into the production stack.
 In retrospect, this would be a good refactor for a future date.
 
-```terraform
+```hcl
 # terraform/environments/staging/outputs.tf
 
 output "aws_route53_zone_name_servers" {
@@ -354,7 +354,7 @@ output "aws_route53_zone_name_servers" {
 }
 ```
 
-```terraform
+```hcl
 # terraform/environments/production/main.tf
 
 module "technoblather" {
@@ -364,7 +364,7 @@ module "technoblather" {
 }
 ```
 
-```terraform
+```hcl
 # terraform/modules/blog/route53.tf
 
 resource "aws_route53_record" "staging" {
