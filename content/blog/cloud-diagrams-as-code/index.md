@@ -62,7 +62,7 @@ with Diagram("ownyourday", show=False):
     database = Dynamodb("DynamoDB")
 
     dns >> cdn >> spa_artifact
-    spa_artifact >> load_balancer >> api_group >>
+    spa_artifact >> load_balancer >> api_group >> database 
 ```
 
 The results are:
