@@ -340,3 +340,7 @@ a:focus {
 .operator {
   background: none!important;
 }
+
+img {
+  width: 100%;
+}
