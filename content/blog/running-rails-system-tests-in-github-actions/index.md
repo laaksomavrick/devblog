@@ -1,7 +1,7 @@
 ---
-title: Running Ruby on Rails System Tests in Github Actions
-date: "2023-03-25T00:00:00.000Z"
-description: Learn how to configure Ruby on Rails and Capybara to utilize headless Chrome in your CI pipeline.
+title: Running Ruby on Rails System Tests in GitHub Actions
+date: "2023-04-16T00:00:00.000Z"
+description: Learn how to configure Ruby on Rails, Capybara, and RSpec to utilize headless Chrome in your CI pipeline for end-to-end testing.
 ---
 
 Any software development project will benefit from automated testing, and running those automated tests from a pipeline ensures new functionality isn't broken or breaking other parts of the system.
@@ -10,12 +10,14 @@ In a continuous integration pipeline, we probably don't want to run the interfac
 Moreover, we want to invoke it via the command line in our CI environment.
 So, we can set up [Capybara](https://github.com/teamcapybara/capybara) to use [headless Chrome](https://developer.chrome.com/blog/headless-chrome/) to solve this for us.
 
-## What does that look like?
+## How do I configure this in my app?
 
-To do this in Rails 7, register a new Selenium driver and configure it to be the driver for each system test in our CI environment:
+Register a new Selenium driver and configure it to be the driver for each system test in our CI environment:
 
 ```ruby
 # spec/support/capybara.rb
+
+is_ci = ENV.fetch('IS_CI', false)
 
 Capybara.register_driver :headless_chrome do |app|
   options = Selenium::WebDriver::Chrome::Options.new(
@@ -31,7 +33,6 @@ Capybara.register_driver :headless_chrome do |app|
 end
 
 RSpec.configure do |config|
-  is_ci = ENV.fetch('IS_CI', false)
   if is_ci
     config.before(:each, type: :system) do
       driven_by :headless_chrome
@@ -51,7 +52,7 @@ require 'support/capybara'
 ...
 ```
 
-During Github Actions runs, set `IS_CI` to be true either from your repository environment variables or from your CI pipeline directly, e.g.:
+In your test step, set `IS_CI` to be true either from your repository environment variables or from your CI pipeline directly:
 
 ```yaml
 - name: Run ruby tests
@@ -66,9 +67,13 @@ During Github Actions runs, set `IS_CI` to be true either from your repository e
   run: rspec
 ```
 
+The `IS_CI` environment variable lets us toggle between using the headless driver and not.
+This allows us to still see the browser during local runs of the system test suite, which can help with authoring and debugging the tests.
+You can explore the surrounding code in [one of my hobby projects](https://github.com/laaksomavrick/ownyourday.ca/blob/main/spec/support/capybara.rb).
+
 ## A bug I encountered
 
-While trying to invoke `rspec` in my Github Actions environment, the following error occurred for each system test:
+While trying to invoke `rspec` in my GitHub Actions environment, the following error occurred for each system test:
 
 ```
 Selenium::WebDriver::Error::UnknownError:
@@ -79,4 +84,4 @@ Selenium::WebDriver::Error::UnknownError:
 
 This was solved by adding the `no-sandbox` argument to `Selenium::WebDriver::Chrome::Options` hash.
 
-A detailed explanation can be found from [this stackoverflow answer](https://stackoverflow.com/questions/50642308/webdriverexception-unknown-error-devtoolsactiveport-file-doesnt-exist-while-t/50642913#50642913)
+A detailed explanation can be found from [this stackoverflow answer](https://stackoverflow.com/questions/50642308/webdriverexception-unknown-error-devtoolsactiveport-file-doesnt-exist-while-t/50642913#50642913).
