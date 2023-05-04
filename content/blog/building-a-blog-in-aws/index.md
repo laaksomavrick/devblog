@@ -757,7 +757,7 @@ We covered a large quantity of information scrolling through the 2000 and some w
 - Setting up request logging in Cloudfront.
 - Creating more alarms for metrics published to Cloudwatch (e.g. p99 latency, cache misses).
 - Setting up DDoS protection with AWS WAF and/or AWS Shield.
-- Setting up a staging environment to validate changes before deploying to production.
+- Setting up [a staging environment](/supporting-staging-and-production-environments-with-terraform) to validate changes before deploying to production.
 - Setting up a budget via AWS Budgets.
 - Setting up a "subscribe" feature for new posts published to the blog.
 - Handling [404 redirects correctly](/handling-404-not-found-content-with-cloudfront-and-s3).
