@@ -67,7 +67,7 @@ with Diagram("ownyourday", show=False):
 
 The results are:
 
-![ownyourday cloud diagram](https://github.com/laaksomavrick/ownyourday.ca/blob/main/tools/diagrams/ownyourday.png?raw=true)
+![ownyourday cloud diagram](https://github.com/laaksomavrick/nx-ownyourday/blob/main/tools/diagrams/ownyourday.png?raw=true)
 
 I'll be using this technique both in my personal work and my professional work going forward.
 Make sure to give `diagrams` a GitHub star if you feel the same.
