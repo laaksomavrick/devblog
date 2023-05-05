@@ -11,6 +11,7 @@ data "aws_iam_policy_document" "provisioner_policy_document" {
       "acm:*",
       "route53:*",
       "route53domains:*",
+      "wafv2:*",
       "autoscaling:Describe*",
       "iam:GetPolicy",
       "iam:GetPolicyVersion",
@@ -20,7 +21,7 @@ data "aws_iam_policy_document" "provisioner_policy_document" {
       "iam:CreateOpenIDConnectProvider",
       "iam:GetOpenIDConnectProvider",
       "iam:DeleteOpenIDConnectProvider",
-      "oam:ListSinks"
+      "oam:ListSinks",
     ]
     resources = ["*"]
   }
