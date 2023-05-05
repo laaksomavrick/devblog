@@ -11,6 +11,8 @@ resource "aws_cloudfront_distribution" "www_s3_distribution" {
   default_root_object = "index.html"
 
   aliases = ["www.${var.domain_name}"]
+  # Since this costs $$$, only enable firewall in prod
+  web_acl_id = var.common_tags["Environment"] == "production" ? aws_wafv2_web_acl.cf_web_acl[0].arn : null
 
   custom_error_response {
     error_caching_min_ttl = 0

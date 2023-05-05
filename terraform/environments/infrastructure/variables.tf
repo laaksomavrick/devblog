@@ -1,5 +1,6 @@
 variable "administrator_arn" {
-  type = string
+  type        = string
+  description = "The ARN for the technoblather administrator IAM role - check AWS console for TechnoblatherAdministrator"
 }
 
 variable "domain_name" {
