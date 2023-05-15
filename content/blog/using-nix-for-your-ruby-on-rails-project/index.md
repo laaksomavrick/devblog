@@ -202,16 +202,188 @@ css: bundler exec rails tailwindcss:watch
 ```
 
 ## Going further, how can we leverage this in our CI environment?
-set it up on CI
 
+Since a major advantage of using Nix is its reproducibility, we should use it for our CI environment as well.
+In my project, I am using GitHub Actions, so I will detail how my continuous integration pipeline is set up using Nix.
 
-    call out using flakes + ~/nix store
-    call out pg-config-path
+```yml
+# .github/workflows/ci.yml
 
-outro
+name: CI
 
-    nix is cool
-    can use to declaratively manage your laptop setup
-    can use to manage your dev environments
-    can use to manage your servers
-    can use to distribute binaries across teams via a binary store (speed up builds)
+on:
+  pull_request:
+    branches: [ main ]
+
+env:
+  IS_CI: true
+  NIX_STORE_PATH: ~/nix
+  PGHOST: localhost
+  POSTGRES_DB: rails_github_actions_test
+  POSTGRES_PASSWORD: postgres
+  POSTGRES_USER: rails_github_actions
+  RAILS_ENV: test
+
+jobs:
+  verify:
+    name: Verify pull request
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        env:
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        image: postgres:11
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v19
+
+      - name: Cache Nix
+        id: cache-nix
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-nix-store
+        with:
+          # By default this should be /nix/store, but we can't restore to /nix/store due to permissions in GH actions
+          # So, set this to somewhere else (e.g. ~/nix) that the runner user can write
+          # And specify this location in subsequent nix commands
+          # See https://github.com/actions/cache/issues/749#issuecomment-1465302692
+          path: ${{ env.NIX_STORE_PATH }}
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('flake.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+
+      - name: Cache Ruby gems
+        id: cache-ruby
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-ruby-store
+        with:
+          path: ./vendor/bundle
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+
+      - name: Cache JavaScript packages
+        id: cache-js
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-js-store
+        with:
+          path: ~/.local/share/pnpm/store
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+
+      - name: Install Nix binaries
+        run: nix --store ${{ env.NIX_STORE_PATH }} develop .
+
+      # Required for pg gem dependencies - we don't want to use /usr/bin/pg_config but the nix binary instead
+      # For the next step (Install Ruby dependencies)
+      - name: Set pg_config path for installing pg gem
+        id: pg-config-path
+        run: echo "PG_CONFIG_PATH=$(nix --store ${{ env.NIX_STORE_PATH }} develop . --command which pg_config)" >> $GITHUB_OUTPUT
+
+      - name: Install Ruby dependencies
+        run: |
+          nix --store ${{ env.NIX_STORE_PATH }} develop . --command bundle config build.pg --with-pg-config=${{ steps.pg-config-path.outputs.PG_CONFIG_PATH }} && \
+          nix --store ${{ env.NIX_STORE_PATH }} develop . --command bundle config path vendor/bundle && \
+          nix --store ${{ env.NIX_STORE_PATH }} develop . --command bundle install --jobs 4 --retry 3
+
+      - name: Install JavaScript dependencies
+        run: |
+          nix --store ${{ env.NIX_STORE_PATH }} develop . --command pnpm install --frozen-lockfile --strict-peer-dependencies
+
+      - name: Setup assets
+        run: nix --store ${{ env.NIX_STORE_PATH }} develop . --command bundler exec rails assets:clean assets:precompile
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check Ruby formatting
+        run: nix --store ${{ env.NIX_STORE_PATH }} develop . --command bundler exec rubocop --fail-level=warning
+
+      - name: Check JavaScript formatting
+        run: nix --store ${{ env.NIX_STORE_PATH }} develop . --command pnpm run format:check
+
+      - name: Check JavaScript lint
+        run: nix --store ${{ env.NIX_STORE_PATH }} develop . --command pnpm run lint
+
+      - name: Run JavaScript tests
+        run: nix --store ${{ env.NIX_STORE_PATH }} develop . --command pnpm run test
+
+      - name: Setup test database
+        run: |
+          cp config/database.ci.yml config/database.yml
+          nix --store ${{ env.NIX_STORE_PATH }} develop . --command rake db:create db:schema:load
+
+      - name: Run Ruby tests
+        run: nix --store ${{ env.NIX_STORE_PATH }} develop . --command bundler exec rspec
+```
+
+Let's explain this pipeline.
+
+In the happy path, the Ruby on Rails application is being built with its dependencies and a set of verifications are being run on the code.
+We are making sure no secrets are present in the code, the code is well formatted, the code is linted, and all of our tests are passing.
+
+Installing the system dependencies is delegated to Nix. 
+This is identical to our local environment.
+So, as an example, we know that both our local environment and CI environment have the same version of `ruby`. 
+
+As it pertains to our dependencies, we cache them to speed up subsequent CI runs.
+A hash of the respective lockfiles for Nix, Ruby, and JavaScript are used as the cache key - if a lockfile is changed, a dependency has changed, so we should break the cache. 
+
+### Errors I encountered
+
+#### Permissions and the /nix/store
+
+Nix stores its binary store at `/nix/store` by default.
+When trying to restore this in CI, I observed permissions errors on trying to restore the nix cache to that location.
+The GitHub actions runner has its own user that does not have permissions to restore to that path.
+There [is a workaround](https://github.com/actions/cache/issues/749#issuecomment-1465302692) which you can observe from the CI declaration.
+Storing the nix binary storage in a path the GitHub actions user can modify (e.g. `~/nix/store`) circumvents this problem.
+
+#### The pg gem and its implied dependencies 
+
+The `pg` gem required by Rails to connect to postgres assumes dependencies on the local system:
+
+```shell
+# from a ci run
+
+Run nix-shell --run 'bundler exec rails assets:clean assets:precompile'
+rails aborted!
+LoadError: libssl.so.3: cannot open shared object file: No such file or directory - /home/runner/.local/share/gem/ruby/3.1.0/gems/pg-1.4.6/lib/pg_ext.so
+```
+
+While debugging what was going on, I noticed that `which pg_config` was pointing towards `/usr/bin/pg_config`.
+We can configure `bundle` to use the correct Nix managed `pg_config` to resolve this via `bundle config build.pg`:
+
+```shell
+#.bundle/config
+
+---
+BUNDLE_BUILD__PG: "--with-pg-config=/nix/store/c4j1gfn0m9i3540ni3az2a9jjnlgyg81-postgresql-11.18/bin/pg_config"
+```
+
+Pointing `pg` at the correct `pg_config` resolved the issue. 
+
+## In sum
+
+Nix may seem daunting at the beginning.
+It's new tech and part of a rapidly evolving ecosystem.
+To grok it effectively, I found it helpful to focus on its instrumentality instead of its theory - hence this blogpost.
+I've only scratched the surface of its capabilities so feel free to explore.
+There are things that could still be improved in this local environment and pipeline - docker is managing postgres still as an example.
+In the future, I would be interested in using Nix to manage my project environments and expand beyond that to other use cases (for example, managing my development environment tooling such as `git`, `tmux`, and so on).
+I'm hoping you found takeaways from me writing about my experience using it for a Ruby on Rails project.
