@@ -1,42 +1,54 @@
 ---
-title: Using Nix for Your Ruby on Rails Project Development Environment
+title: Using Nix for Your Ruby on Rails Development Environment
 date: "2023-05-14T00:00:00.000Z"
-description: Reduce developer friction and gain quick and reproducible CI builds with Nix and GitHub Actions
+description: Reduce developer friction and gain reproducible builds with Nix and GitHub Actions.
 ---
 
-Recently, a new colleague onboarded onto one of our projects.
+## A brief anecdote
+
+Developers come and go with client-oriented work, and with that, there is generally a prescribed process for getting projects running on their machines honed with each departure and addition.
+
+Recently, a new colleague was onboarded onto one of our projects.
 All of our devs were running Intel-based (`x86`) Macs for their client machines.
-Our new colleague was running a new M1-based (`arm`) Mac. 
+Our new colleague was running an M1-based (`arm`) Mac. 
 Because of this, setting up the project on their machine went from an assumed trivial task with `docker` to a week-long process.
+This is frustrating and is not a great use of time nor an enjoyable one when you want to have developers hit the ground running and start producing.
+
 Whether you've been the onboarder, the onboardee, or just have too many machines lying around, you've probably experienced a similar situation.
 
-I've been focusing on shoring up my DevOps toolkit lately and wanted to explore using [Nix](https://nixos.org/).
-This seemed like a perfect use case to solve a problem for our developer experience and learn something new.
+I've been focusing on shoring up my DevOps toolkit lately and wanted to explore using [Nix](https://nixos.org/) given the surrounding buzz.
+This situation seemed like a perfect use case to solve a problem with our developer experience and learn something new.
 
 ## What is Nix?
 
-There is a lot of technoblather-jargon around Nix since it's a new technology and a rapidly evolving ecosystem.
+There is a lot of techno-jargon around Nix since it's a new technology and a rapidly evolving ecosystem.
 I will try to speak to it in terms of how it's useful instead of how or why it works.
-Note: I am still learning the tool and its ecosystem so allow me thoughts from my brief experience.
+The subsequent Rails project setup documented below provides a practical example of the tool.
+However, I am still learning it and its ecosystem so assume an asterisk around my claims - email me if I've gotten something wrong.
 
 Nix is a language, a package manager, and system configuration tool.
-We can use the `nix` language to author declarative files that specify configurations for our systems and their environments.
-The package manager guarantees installed package versions will not collide, reducing side effects from package upgrades or deprecations.
-You can have one or more configurations present on an operating system - a colleague compared it to being like `virtualenv` and `brew` combined in terms of its utility.
+We can use the `nix` language to author declarative files (`*.nix`) that specify a configuration for our systems and their environments.
+The package management functionality guarantees installed package versions will not collide, reducing side effects from package upgrades or deprecations.
+We can have one or more configurations present on an operating system - a colleague compared it to being like `virtualenv` and `brew` combined in terms of its utility.
 
 So, we can have one project set up with `ruby`, `docker`, `postgres`, and `git` with their exact versions and another with the same tools but different versions.
-Changes to the former project (e.g. upgrading `ruby`) will not affect or break the others.
+Changes to the former project (e.g., upgrading `ruby`) will not affect or break the others.
+
 Moreover, when it comes time to deploy this project in a new environment, we can leverage the same tooling to guarantee the exact same environment.
-This solves a huge problem: no more stating "it works on my machine" to our colleagues and stakeholders and instead focusing on delivering functionality versus debugging environment differences.
+This solves a huge problem: no more stating "it works on my machine" (and spending time debugging environment differences) to our colleagues and stakeholders and instead focusing on delivering functionality.
+
+Further, with client work, project hand-offs are simplified for whomever ends up responsible for the work we've done: indicate in a `README` to install Nix and delegate handling project dependency installation and configuration to the tool.
 
 
 ## Great - what does that look like for my Ruby on Rails project?
 
-To begin, you'll need to get Nix installed on your machine, enable [flakes](https://nixos.wiki/wiki/Flakes), and install `direnv`.
+First, all code referenced in this blog post can be found in [my hobby project ownyourday](https://github.com/laaksomavrick/ownyourday.ca).
 
+
+To begin, you'll need to get Nix installed and configured on your machine.
 See [this blog post from a colleague](https://blog.testdouble.com/posts/2023-05-02-frictionless-developer-environments/) for a good explanation of the steps and their reasoning.
 
-If you're feeling lazy, the commands to run are:
+If you're feeling lazy, the commands to run (from aforementioned blog post) are:
 ```shell
 # enable nix flakes
 mkdir -p "$HOME/.config/nix"
@@ -53,8 +65,7 @@ echo 'eval "$(direnv hook zsh)"' >> "$HOME/.zshrc"
 direnv allow
 ```
 
-Now, let's create our first `flake` and configure `direnv` to automatically use it.
-All code referenced can be found in [a hobby project](https://github.com/laaksomavrick/ownyourday.ca) I am currently working on if you'd like to explore.
+Now, let's create our first [flake](https://nixos.wiki/wiki/Flakes) and configure [direnv](https://direnv.net/) to automatically use it.
 
 Create a file called `.envrc` in the project root and add this line:
 
@@ -64,11 +75,12 @@ Create a file called `.envrc` in the project root and add this line:
 use flake
 ```
 
-This integrates `direnv` to install and use our Nix packages in a shell when we enter this directory automatically.
+This integrates `direnv` to install and use our Nix packages in a shell when we enter this directory via the `flake` we're about to write.
 
 Next, create a file called `flake.nix` in the project root and configure it appropriately.
 In my Rails project, I am using `postgres` for the database, `node` for running the JavaScript toolchain, `pnpm` for the JavaScript toolchain package manager, and `ruby3.1.0` for the `ruby` version.
 Further, I specify `docker`, `git`, and `make` given all are involved in the operation of the developer environment for the project.
+To find additional packages, visit [this resource](https://search.nixos.org/packages?channel=22.11&from=0&size=50&sort=relevance&type=packages).
 
 ```nix
 # flake.nix
@@ -121,15 +133,16 @@ Further, I specify `docker`, `git`, and `make` given all are involved in the ope
 
 ```
 
-Observe that entering our project now installs all the specified packages and generates a `flake.lock` file.
-To verify we're using the Nix binaries, run `which ruby` and observe:
+Observe that `cd`ing to the project directory now installs all the specified packages and generates a `flake.lock` file.
+To verify we're using the Nix binaries run `which ruby` and observe:
 
-```
+```sh
+~/code/personal/ownyourday main $ which ruby
 /nix/store/6m71ianr78w8lgbrgzq04wfp7w67hc50-ruby-3.1.2/bin/ruby
 ```
 
-Great! If we push this up to version control, we can be certain our teammates will be using the same dependencies as us.
-Moreover, if we are working on multiple projects at a time, we can be sure changes in one project's dependencies won't affect the other (such as upgrading a globally installed `gem`).
+Great! If we push this up to version control, we could be certain our teammates would be using the same dependencies as us.
+Moreover, if we are working on multiple projects at a time, we can be certain changes in one project's dependencies won't affect the other (e.g., upgrading a globally installed `gem` like `rails`).
 
 ### Errors I encountered
 
