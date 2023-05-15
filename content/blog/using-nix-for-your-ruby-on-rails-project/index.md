@@ -1,7 +1,7 @@
 ---
 title: Using Nix for Your Ruby on Rails Development Environment
 date: "2023-05-14T00:00:00.000Z"
-description: Reduce developer friction and gain reproducible builds with Nix and GitHub Actions.
+description: Reduce developer friction and gain reproducible builds for your Ruby on Rails projects with Nix and GitHub Actions.
 ---
 
 ## A brief anecdote
@@ -10,7 +10,7 @@ Developers come and go with client-oriented work, and with that, there is genera
 
 Recently, a new colleague was onboarded onto one of our projects.
 All of our devs were running Intel-based (`x86`) Macs for their client machines.
-Our new colleague was running an M1-based (`arm`) Mac. 
+Our new colleague was running an M1-based (`arm`) Mac.
 Because of this, setting up the project on their machine went from an assumed trivial task with `docker` to a week-long process.
 This is frustrating and is not a great use of time nor an enjoyable one when you want to have developers hit the ground running and start producing.
 
@@ -39,16 +39,15 @@ This solves a huge problem: no more stating "it works on my machine" (and spendi
 
 Further, with client work, project hand-offs are simplified for whomever ends up responsible for the work we've done: indicate in a `README` to install Nix and delegate handling project dependency installation and configuration to the tool.
 
-
 ## Great - what does that look like for my Ruby on Rails project?
 
 First, all code referenced in this blog post can be found in [my hobby project ownyourday](https://github.com/laaksomavrick/ownyourday.ca).
-
 
 To begin, you'll need to get Nix installed and configured on your machine.
 See [this blog post from a colleague](https://blog.testdouble.com/posts/2023-05-02-frictionless-developer-environments/) for a good explanation of the steps and their reasoning.
 
 If you're feeling lazy, the commands to run (from aforementioned blog post) are:
+
 ```shell
 # enable nix flakes
 mkdir -p "$HOME/.config/nix"
@@ -144,12 +143,13 @@ To verify we're using the Nix binaries run `which ruby` and observe:
 Great! If we push this up to version control, we could be certain our teammates would be using the same dependencies as us.
 Moreover, if we are working on multiple projects at a time, we can be certain changes in one project's dependencies won't affect the other (e.g., upgrading a globally installed `gem` like `rails`).
 
-### Errors I encountered
+### Some hiccups along the way
 
 #### Rspec
 
-I was seeing gem incompatibility errors when trying to run tests locally.
-My Rails project uses `rspec`, so I assumed something was up between `rbenv` and `nix`.
+When running tests locally, I observed `gem` incompatibility errors (the exact errors are long-lost in my terminal history).
+The Rails project uses `rspec` as its test runner, so I assumed something was up between `rbenv` and `nix`.
+
 Sure enough:
 
 ```sh
@@ -157,7 +157,7 @@ Sure enough:
 /Users/mav/.rbenv/shims/rspec
 ```
 
-This was solved by explicitly adding `rspec` to the project's `Gemfile` so that calling `rspec` didn't delegate to globally installed gems.
+This was solved by explicitly adding `rspec` to the Rails project's `Gemfile` such that invoking `rspec` wouldn't delegate to globals:
 
 ```ruby
 # Gemfile
@@ -165,7 +165,7 @@ This was solved by explicitly adding `rspec` to the project's `Gemfile` so that 
 ...
 
 group :development, :test do
-  ... 
+  ...
   gem 'rspec', '~> 3.12.0'
   ...
 end
@@ -176,15 +176,16 @@ end
 
 #### Tailwind
 
-Similarly, my project uses `tailwindcss` which sets up a `watch` using `foreman` to rebuild `css` on file changes.
-When trying to serve my application via `/bin/dev`, I encountered the following error:
+Similarly, the Rails project uses `tailwindcss-rails` which sets up a watch-and-rebuild cycle using `foreman` on file changes that affect styling.
+When trying to serve the application via `/bin/dev` (or `make serve` in my case), I encountered the following error:
 
 ```sh
+~/code/personal/ownyourday main $ make serve
 bundler: failed to load command: foreman (/Users/mav/.gem/ruby/3.1.0/bin/foreman)
 /Users/mav/.gem/ruby/3.1.0/gems/bundler-2.3.7/lib/bundler/rubygems_integration.rb:319:in `block in replace_bin_path': can't find executable foreman for gem foreman. foreman is not currently included in the bundle, perhaps you meant to add it to your Gemfile? (Gem::Exception)
 ```
 
-Solving it required explictly installing `foreman` and changing the `/bin/dev` and `Procfile.dev` commands to use locally installed packages:
+Solving it required explicitly installing `foreman` in the `Gemfile` alongside modifying the out-of-the-box `/bin/dev` and `Procfile.dev` commands to use locally installed packages:
 
 ```ruby
 # Gemfile
@@ -216,8 +217,9 @@ css: bundler exec rails tailwindcss:watch
 
 ## Going further, how can we leverage this in our CI environment?
 
-Since a major advantage of using Nix is its reproducibility, we should use it for our CI environment as well.
-In my project, I am using GitHub Actions, so I will detail how my continuous integration pipeline is set up using Nix.
+Since a major advantage of using Nix is its build-reproducibility, we should use it for our continuous integration environment as well.
+In the Rails project, GitHub Actions is used.
+So, lets take a look at how the CI pipeline is set up with Nix:
 
 ```yml
 # .github/workflows/ci.yml
@@ -226,7 +228,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 env:
   IS_CI: true
@@ -267,7 +269,7 @@ jobs:
         env:
           cache-name: cache-nix-store
         with:
-          # By default this should be /nix/store, but we can't restore to /nix/store due to permissions in GH actions
+          # By default, this should be /nix/store, but we can't restore to /nix/store due to permissions in GH actions
           # So, set this to somewhere else (e.g. ~/nix) that the runner user can write
           # And specify this location in subsequent nix commands
           # See https://github.com/actions/cache/issues/749#issuecomment-1465302692
@@ -345,29 +347,33 @@ jobs:
         run: nix --store ${{ env.NIX_STORE_PATH }} develop . --command bundler exec rspec
 ```
 
-Let's explain this pipeline.
-
 In the happy path, the Ruby on Rails application is being built with its dependencies and a set of verifications are being run on the code.
-We are making sure no secrets are present in the code, the code is well formatted, the code is linted, and all of our tests are passing.
+We are making sure the project can build, no secrets are present in the code, the code is well formatted, the code is linted, and all the tests are passing.
 
-Installing the system dependencies is delegated to Nix. 
-This is identical to our local environment.
-So, as an example, we know that both our local environment and CI environment have the same version of `ruby`. 
+Installing the system dependencies is delegated to Nix.
+This is identical to the local environment set up previously because of the `flake.nix` configuration.
+So, as an example, we know that both the local environment and CI environment have the same version of `ruby`.
 
-As it pertains to our dependencies, we cache them to speed up subsequent CI runs.
-A hash of the respective lockfiles for Nix, Ruby, and JavaScript are used as the cache key - if a lockfile is changed, a dependency has changed, so we should break the cache. 
+The pipeline also caches installed dependencies to speed up subsequent CI runs.
+A hash of the respective lockfiles for Nix, Ruby, and JavaScript are used as the cache key - if a lockfile is changed, a dependency has changed, so the cache should be broken.
+Otherwise, don't bother re-downloading and reinstalling the dependencies - back them up from the GitHub actions cache instead.
 
-### Errors I encountered
+### Some more hiccups along the way
 
 #### Permissions and the /nix/store
 
-Nix stores its binary store at `/nix/store` by default.
-When trying to restore this in CI, I observed permissions errors on trying to restore the nix cache to that location.
+Nix stores binaries in `/nix/store` by default.
+When cached binaries were present for the lockfile hash, the CI user would try to restore binaries to that path.
+Makes sense.
+
+However, this was triggering permissions errors.
 The GitHub actions runner has its own user that does not have permissions to restore to that path.
-There [is a workaround](https://github.com/actions/cache/issues/749#issuecomment-1465302692) which you can observe from the CI declaration.
+There [is a workaround](https://github.com/actions/cache/issues/749#issuecomment-1465302692) which can be observed from the CI declaration.
 Storing the nix binary storage in a path the GitHub actions user can modify (e.g. `~/nix/store`) circumvents this problem.
 
-#### The pg gem and its implied dependencies 
+However, this meant I had to use `flakes` instead of `nix-shell` and that the Nix CI steps are littered with a `--store` argument.
+
+#### The pg gem and its implied dependencies
 
 The `pg` gem required by Rails to connect to postgres assumes dependencies on the local system:
 
@@ -380,7 +386,10 @@ LoadError: libssl.so.3: cannot open shared object file: No such file or director
 ```
 
 While debugging what was going on, I noticed that `which pg_config` was pointing towards `/usr/bin/pg_config`.
-We can configure `bundle` to use the correct Nix managed `pg_config` to resolve this via `bundle config build.pg`:
+Given all the commands were running in a Nix configured shell, `/usr/bin/pg_config` was empty, since postgres was installed via Nix.
+So, configuring `bundle` to use the correct Nix managed `pg_config` resolved this.
+
+This creates a local file that looks like:
 
 ```shell
 #.bundle/config
@@ -389,14 +398,31 @@ We can configure `bundle` to use the correct Nix managed `pg_config` to resolve 
 BUNDLE_BUILD__PG: "--with-pg-config=/nix/store/c4j1gfn0m9i3540ni3az2a9jjnlgyg81-postgresql-11.18/bin/pg_config"
 ```
 
-Pointing `pg` at the correct `pg_config` resolved the issue. 
+Given this, observe the following pipeline steps:
+
+```yml
+# Required for pg gem dependencies - we don't want to use /usr/bin/pg_config but the nix binary instead
+# For the next step (Install Ruby dependencies)
+- name: Set pg_config path for installing pg gem
+  id: pg-config-path
+  run: echo "PG_CONFIG_PATH=$(nix --store ${{ env.NIX_STORE_PATH }} develop . --command which pg_config)" >> $GITHUB_OUTPUT
+
+- name: Install Ruby dependencies
+  run: |
+    nix --store ${{ env.NIX_STORE_PATH }} develop . --command bundle config build.pg --with-pg-config=${{ steps.pg-config-path.outputs.PG_CONFIG_PATH }} && \
+    nix --store ${{ env.NIX_STORE_PATH }} develop . --command bundle config path vendor/bundle && \
+    nix --store ${{ env.NIX_STORE_PATH }} develop . --command bundle install --jobs 4 --retry 3
+```
+
+Pointing `pg` at the correct `pg_config` resolved the issue.
 
 ## In sum
 
-Nix may seem daunting at the beginning.
-It's new tech and part of a rapidly evolving ecosystem.
+Nix may seem daunting at the beginning - and it is.
+It's a new technology and accordingly part of a rapidly evolving ecosystem.
 To grok it effectively, I found it helpful to focus on its instrumentality instead of its theory - hence this blogpost.
-I've only scratched the surface of its capabilities so feel free to explore.
-There are things that could still be improved in this local environment and pipeline - docker is managing postgres still as an example.
-In the future, I would be interested in using Nix to manage my project environments and expand beyond that to other use cases (for example, managing my development environment tooling such as `git`, `tmux`, and so on).
-I'm hoping you found takeaways from me writing about my experience using it for a Ruby on Rails project.
+
+Going forward, I am optimistic about its adoption and its capabilities to improve the reliability of features we ship and the developer experience for new and existing projects.
+
+I hope you've been able to learn something by following along with my journey to use it to improve the developer experience of a Ruby on Rails project.
+If you have any feedback, feel free to email me via the "contact him here" at the bottom of the page.
