@@ -26,10 +26,10 @@ I will try to speak to it in terms of how it's useful instead of how or why it w
 The subsequent Rails project setup documented below provides a practical example of the tool.
 However, I am still learning it and its ecosystem so assume an asterisk around my claims - email me if I've gotten something wrong.
 
-Nix is a language, a package manager, and system configuration tool.
+Nix is a language, a package manager, and a system configuration tool.
 We can use the `nix` language to author declarative files (`*.nix`) that specify a configuration for our systems and their environments.
 The package management functionality guarantees installed package versions will not collide, reducing side effects from package upgrades or deprecations.
-We can have one or more configurations present on an operating system - a colleague compared it to being like `virtualenv` and `brew` combined in terms of its utility.
+We can have one or more configurations present on an operating system - a colleague compared it to being like `virtualenv` and `brew` combined.
 
 So, we can have one project set up with `ruby`, `docker`, `postgres`, and `git` with their exact versions and another with the same tools but different versions.
 Changes to the former project (e.g., upgrading `ruby`) will not affect or break the others.
@@ -37,7 +37,7 @@ Changes to the former project (e.g., upgrading `ruby`) will not affect or break 
 Moreover, when it comes time to deploy this project in a new environment, we can leverage the same tooling to guarantee the exact same environment.
 This solves a huge problem: no more stating "it works on my machine" (and spending time debugging environment differences) to our colleagues and stakeholders and instead focusing on delivering functionality.
 
-Further, with client work, project hand-offs are simplified for whomever ends up responsible for the work we've done: indicate in a `README` to install Nix and delegate handling project dependency installation and configuration to the tool.
+Further, with client work, project hand-offs are simplified for whoever ends up responsible for the work we've done: indicate in a `README` to install Nix and delegate handling project dependency installation and configuration to the tool.
 
 ## Great - what does that look like for my Ruby on Rails project?
 
@@ -46,7 +46,7 @@ First, all code referenced in this blog post can be found in [my hobby project o
 To begin, you'll need to get Nix installed and configured on your machine.
 See [this blog post from a colleague](https://blog.testdouble.com/posts/2023-05-02-frictionless-developer-environments/) for a good explanation of the steps and their reasoning.
 
-If you're feeling lazy, the commands to run (from aforementioned blog post) are:
+If you're feeling lazy, the commands to run (from the aforementioned blog post) are:
 
 ```shell
 # enable nix flakes
@@ -219,7 +219,7 @@ css: bundler exec rails tailwindcss:watch
 
 Since a major advantage of using Nix is its build-reproducibility, we should use it for our continuous integration environment as well.
 In the Rails project, GitHub Actions is used.
-So, lets take a look at how the CI pipeline is set up with Nix:
+So, let's take a look at how the CI pipeline is set up with Nix:
 
 ```yml
 # .github/workflows/ci.yml
@@ -348,7 +348,7 @@ jobs:
 ```
 
 In the happy path, the Ruby on Rails application is being built with its dependencies and a set of verifications are being run on the code.
-We are making sure the project can build, no secrets are present in the code, the code is well formatted, the code is linted, and all the tests are passing.
+We are making sure the project can build, no secrets are present in the code, the code is well-formatted, the code is linted, and all tests are passing.
 
 Installing the system dependencies is delegated to Nix.
 This is identical to the local environment set up previously because of the `flake.nix` configuration.
@@ -367,7 +367,7 @@ When cached binaries were present for the lockfile hash, the CI user would try t
 Makes sense.
 
 However, this was triggering permissions errors.
-The GitHub actions runner has its own user that does not have permissions to restore to that path.
+The GitHub actions runner has its own user that does not have permission to restore to that path.
 There [is a workaround](https://github.com/actions/cache/issues/749#issuecomment-1465302692) which can be observed from the CI declaration.
 Storing the nix binary storage in a path the GitHub actions user can modify (e.g. `~/nix/store`) circumvents this problem.
 
@@ -386,10 +386,10 @@ LoadError: libssl.so.3: cannot open shared object file: No such file or director
 ```
 
 While debugging what was going on, I noticed that `which pg_config` was pointing towards `/usr/bin/pg_config`.
-Given all the commands were running in a Nix configured shell, `/usr/bin/pg_config` was empty, since postgres was installed via Nix.
-So, configuring `bundle` to use the correct Nix managed `pg_config` resolved this.
+Given all the commands were running in a Nix-configured shell, `/usr/bin/pg_config` was empty, since postgres was installed via Nix.
+So, configuring `bundle` to use the correct Nix-managed `pg_config` resolved this.
 
-This creates a local file that looks like:
+This creates a local file that looks like this:
 
 ```shell
 #.bundle/config
@@ -420,7 +420,7 @@ Pointing `pg` at the correct `pg_config` resolved the issue.
 
 Nix may seem daunting at the beginning - and it is.
 It's a new technology and accordingly part of a rapidly evolving ecosystem.
-To grok it effectively, I found it helpful to focus on its instrumentality instead of its theory - hence this blogpost.
+To grok it effectively, I found it helpful to focus on its instrumentality instead of its theory - hence this blog post.
 
 Going forward, I am optimistic about its adoption and its capabilities to improve the reliability of features we ship and the developer experience for new and existing projects.
 
