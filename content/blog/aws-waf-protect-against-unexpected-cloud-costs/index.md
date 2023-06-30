@@ -14,8 +14,8 @@ Nobody likes waking up at 2am because their server rack has caught fire - or bec
 And so, operating software in the cloud has become ubiquitous.
 Accordingly, our personal projects and hobby work have also changed from operating on toaster ovens beneath our desks to Amazuroogle-branded GUI fascia in your browser.
 
-However, this shift has introduced new anxieties for concern.
-While the cloud does have generous free tiers, we are using someone else's computer, and (generally) pay-per-request.
+However, this shift has introduced new problems that warrant concern.
+While the cloud does have generous free tiers, we are using someone else's computer and (generally) pay-per-request.
 And the internet - as wonderful as it is - is anarchical and sometimes actively hostile.
 Pay-per-request billing ups the ante on malicious traffic from "taking your service down" to "having a very large credit card bill".
 
@@ -23,7 +23,7 @@ Particular to hobbyists - arguing with support about the $5000 cloud charge I di
 You _can_ set an alert to notify you of these events - but what if you're asleep? 
 Or if the damage has been done within a five minute interval?
 
-Given I operate technoblather on AWS, I wanted to see if there was a way I could kibosh this nightmare scenario and consequently sleep soundly.
+Given I operate technoblather on AWS, I wanted to see if there was a way I could kibosh this nightmare scenario with my technical chops and consequently sleep soundly.
 
 ## There's a service for that
 
@@ -38,8 +38,8 @@ Specifically, observe the following terraform declaration:
 # terraform/modules/blog/waf.tf
 
 resource "aws_wafv2_web_acl" "cf_web_acl" {
-  count = var.common_tags["Environment"] == "production" ? 1 : 0
   # Since this costs $$$, only enable firewall acl in prod
+  count = var.common_tags["Environment"] == "production" ? 1 : 0
   name        = "technoblather-cf-web-acl"
   description = "Web acl for technoblather cloudfront distribution"
   scope       = "CLOUDFRONT"
@@ -221,11 +221,11 @@ Technoblather uses a number of managed rules:
 * `AWSManagedRulesKnownBadInputsRuleSet`
 * `AWSManagedRulesBotControlRuleSet`
 
-alongside a fallback rate-based-rule, limiting all traffic to a maximum of 100 requests per 5 minutes, or 0.16 rps.
+Alongside a fallback rate-based-rule, limiting all traffic to a maximum of 100 requests per 5 minutes or 0.16 requests-per-second.
 This configuration uses 1127 out of [1500 allowed WCUs for the free tier](https://aws.amazon.com/waf/pricing/), meaning I only pay a flat fee for AWS WAF.
 Moreover, it provides a blanket level of security that would take me days individually to set up and adjust alongside ongoing updates and maintenance.
 
 This doesn't guarantee I won't get an expensive cloud bill one day, but like car theft, it means it's probably easier to move onto the next target.
-Independent of having AWS WAF set up, setting up an alert (and potentially a killswitch automation) on cloud billing is recommended for hobby projects - personal applications don't need 100% uptime.
+Independent of having AWS WAF set up, setting up an alert (and potentially a killswitch automation - personal applications don't need 100% uptime) on cloud billing is recommended for hobby projects.
 Hopefully you can integrate WAF with your hobby projects (or production workloads) to alleviate the same concerns I had.
 Until next time - [my dog Ruby](ruby.png) will be waking me up at 6am regardless, but my sleep prior will be a little more sound.
