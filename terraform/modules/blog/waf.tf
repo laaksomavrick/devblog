@@ -1,3 +1,14 @@
+# Re: options, see https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-list.html
+# Re: nesting, https://docs.aws.amazon.com/waf/latest/developerguide/waf-rule-statement-type-managed-rule-group.html
+# -> so we can't use an OR
+
+# Ran into problem creating multiple rules https://github.com/hashicorp/terraform-provider-aws/issues/14094
+# Actually     override_action {
+#none{}
+#}
+
+# Note: this config uses 1127 WCUs. ensure not to go above 1500 otherwise price increase as per https://aws.amazon.com/waf/pricing/
+
 resource "aws_wafv2_web_acl" "cf_web_acl" {
   count = var.common_tags["Environment"] == "production" ? 1 : 0
   # Since this costs $$$, only enable firewall acl in prod
