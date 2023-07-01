@@ -3,13 +3,13 @@ title: Guarding Against Unexpected Cloud Costs with AWS WAF
 date: "2023-06-30T00:00:00.000Z"
 description: Block bot-driven DDoS attacks alongside common exploits and malicious traffic using AWS WAF.
 ---
+
 ## We all use the cloud
 
 It's uncontentious that operating software in the cloud [has many benefits](https://docs.aws.amazon.com/whitepapers/latest/aws-overview/six-advantages-of-cloud-computing.html).
 How often have you seriously discussed with colleagues the merits of operating a new service on-prem?
 Or opting to roll-your-own for whatever new-shiny-thing you want to use in your production workloads versus delegating that responsibility (and all the corresponding risk) to a managed service?
 Nobody likes waking up at 2am because their server rack has caught fire - or because the night crew tripped over the power cable.
-
 
 And so, operating software in the cloud has become ubiquitous.
 Accordingly, our personal projects and hobby work have also changed from operating on toaster ovens beneath our desks to Amazuroogle-branded GUI fascia in your browser.
@@ -20,7 +20,7 @@ And the internet - as wonderful as it is - is anarchical and sometimes actively 
 Pay-per-request billing ups the ante on malicious traffic from "taking your service down" to "having a very large credit card bill".
 
 Particular to hobbyists - arguing with support about the $5000 cloud charge I didn't know I could have is not a situation I ever want to be in.
-You _can_ set an alert to notify you of these events - but what if you're asleep? 
+You _can_ set an alert to notify you of these events - but what if you're asleep?
 Or if the damage has been done within a five minute interval?
 
 Given I operate technoblather on AWS, I wanted to see if there was a way I could kibosh this nightmare scenario with my technical chops and consequently sleep soundly.
@@ -30,7 +30,7 @@ Given I operate technoblather on AWS, I wanted to see if there was a way I could
 Surprise, surprise.
 There [is a service for that](https://aws.amazon.com/waf/).
 Web Application Firewall allows operators to define one or more rules to allow or block internet traffic to resources being operated.
-AWS offers a [myriad of managed rules for common use cases](https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-list.html) and allows for operators to define custom rules to meet their own requirements. 
+AWS offers a [myriad of managed rules for common use cases](https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-list.html) and allows for operators to define custom rules to meet their own requirements.
 Technoblather uses this service to block malicious traffic with a rate-limit fallback to provide an upper bound on the damage that can potentially be done.
 Specifically, observe the following terraform declaration:
 
@@ -214,12 +214,13 @@ resource "aws_wafv2_web_acl" "cf_web_acl" {
 ```
 
 Technoblather uses a number of managed rules:
-* `AWSManagedRulesAdminProtectionRuleSet`
-* `AWSManagedRulesAmazonIpReputationList`
-* `AWSManagedRulesAnonymousIpList`
-* `AWSManagedRulesCommonRuleSet`
-* `AWSManagedRulesKnownBadInputsRuleSet`
-* `AWSManagedRulesBotControlRuleSet`
+
+- `AWSManagedRulesAdminProtectionRuleSet`
+- `AWSManagedRulesAmazonIpReputationList`
+- `AWSManagedRulesAnonymousIpList`
+- `AWSManagedRulesCommonRuleSet`
+- `AWSManagedRulesKnownBadInputsRuleSet`
+- `AWSManagedRulesBotControlRuleSet`
 
 Alongside a fallback rate-based-rule, limiting all traffic to a maximum of 100 requests per 5 minutes or 0.16 requests-per-second.
 This configuration uses 1127 out of [1500 allowed WCUs for the free tier](https://aws.amazon.com/waf/pricing/), meaning I only pay a flat fee for AWS WAF.
