@@ -34,7 +34,7 @@ AWS offers a [myriad of managed rules for common use cases](https://docs.aws.ama
 Technoblather uses this service to block malicious traffic with a rate-limit fallback to provide an upper bound on the damage that can potentially be done.
 Specifically, observe the following terraform declaration:
 
-```terraform
+```hcl
 # terraform/modules/blog/waf.tf
 
 resource "aws_wafv2_web_acl" "cf_web_acl" {
@@ -229,4 +229,7 @@ Moreover, it provides a blanket level of security that would take me days indivi
 This doesn't guarantee I won't get an expensive cloud bill one day, but like car theft, it means it's probably easier to move onto the next target.
 Independent of having AWS WAF set up, setting up an alert (and potentially a killswitch automation - personal applications don't need 100% uptime) on cloud billing is recommended for hobby projects.
 Hopefully you can integrate WAF with your hobby projects (or production workloads) to alleviate the same concerns I had.
-Until next time - [my dog Ruby](ruby.png) will be waking me up at 6am regardless, but my sleep prior will be a little more sound.
+
+Until next time - my dog Ruby will be waking me up at 6am regardless, but my sleep prior will be a little more sound.
+
+![Ruby](ruby.jpeg)
