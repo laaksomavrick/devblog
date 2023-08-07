@@ -33,7 +33,7 @@ The logs from the API Gateway didn't indicate any issues beyond timeouts occurri
 
 So, I suspected the problem involved the implementation of our Lambda functions.
 Two scenarios were obvious to me.
-Either the I/O they performed (external network calls) would sometimes spike, causing the timeouts, or the lambdas were slow to re-initialize after being deallocated (i.e. a slow cold start).
+Either the I/O they performed (external network calls) would sometimes spike, causing the timeouts, or the Lambdas were slow to re-initialize after being deallocated (i.e. a slow cold start).
 
 Since we had no observability beyond application logs, I plumbed in [X-Ray](https://aws.amazon.com/xray/) to capture more detailed traces for the Lambda functions and waited for the "ghost" to haunt us again.
 Combined with cross-referencing the API Gateway `IntegrationLatency` metric, pinpointing one of these events was simple.
@@ -47,11 +47,11 @@ So, definitively, our problem was that our cold start times were drastically slo
 
 To fix this, there were two obvious options.
 
-We could throw money at the problem. Using [provisioned concurrency](https://docs.aws.amazon.com/lambda/latest/dg/provisioned-concurrency.html), we could keep one lambda warm indefinitely and ready to serve requests.
+We could throw money at the problem. Using [provisioned concurrency](https://docs.aws.amazon.com/lambda/latest/dg/provisioned-concurrency.html), we could keep one Lambda warm indefinitely and ready to serve requests.
 
 Or, we could investigate _why_ the cold starts were taking so long. Was this a problem with our Docker configuration, our application code, or something else?
 
-Given there were several lambda functions for this internal tool and more on the way, having to configure provisioned concurrency for each seemed to defeat the purpose of using Lambda functions in the first place: we wanted cost savings for infrequently used business processes.
+Given there were several Lambda functions for this internal tool and more on the way, having to configure provisioned concurrency for each seemed to defeat the purpose of using Lambda functions in the first place: we wanted cost savings for infrequently used business processes.
 So, I opted to investigate and attempt to address the core issue.
 
 ## Identify the root cause
@@ -63,7 +63,7 @@ However, our runtime (`Node.js`) was not supported.
 So, I opted to profile the code locally.
 If the initialization time is slow on a Lambda, it would probably also be slow on a local machine since the runtimes are the same.
 
-To do this, I used [0x](https://www.npmjs.com/package/0x) to capture a flame graph of the invocation of the lambda function locally from a script.
+To do this, I used [0x](https://www.npmjs.com/package/0x) to capture a flame graph of the invocation of the Lambda function locally from a script.
 
 The results were telling:
 
