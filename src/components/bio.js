@@ -20,6 +20,8 @@ const Bio = () => {
           }
           social {
             email
+            github
+            linkedin
           }
         }
       }
@@ -44,9 +46,12 @@ const Bio = () => {
       />
       {author?.name && (
         <p>
-          Written by <strong>{author.name}</strong>. {author?.summary || null}
+          Written by <strong>{author.name}</strong>.{` `}
+          {author.summary}
           {` `}
-          Contact him <a href={`mailto:${social.email}`}>here</a>.
+          Find him on <a href={social.linkedin}>LinkedIn</a>,{" "}
+          <a href={social.github}>Github</a>, or via{" "}
+          <a href={`mailto:${social.email}`}>email</a>.
         </p>
       )}
     </div>
