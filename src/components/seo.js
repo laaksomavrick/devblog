@@ -15,7 +15,9 @@ const Seo = ({ description, title, children }) => {
         site {
           siteMetadata {
             title
+            image
             description
+            siteUrl
             social {
               email
               linkedin
@@ -29,6 +31,10 @@ const Seo = ({ description, title, children }) => {
 
   const metaDescription = description || site.siteMetadata.description
   const defaultTitle = site.siteMetadata?.title
+  const defaultImage = site.siteMetadata?.image
+  const defaultUrl = site.siteMetadata?.siteUrl
+
+  const image = `${defaultUrl}${defaultImage}`
 
   return (
     <>
@@ -37,6 +43,7 @@ const Seo = ({ description, title, children }) => {
       <meta property="og:title" content={title} />
       <meta property="og:description" content={metaDescription} />
       <meta property="og:type" content="website" />
+      <meta name="image" property="og:image" content={image} />
       {children}
     </>
   )
