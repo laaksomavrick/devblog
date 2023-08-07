@@ -18,6 +18,8 @@ const Seo = ({ description, title, children }) => {
             description
             social {
               email
+              linkedin
+              github
             }
           }
         }

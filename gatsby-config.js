@@ -12,12 +12,14 @@ module.exports = {
     title: `technoblather`,
     author: {
       name: `Mavrick Laakso`,
-      summary: `Blogging learnings and thoughts on developing and operating software.`,
+      summary: `He is an experienced software developer with eight years of technical experience.`,
     },
-    description: `Blogging learnings and thoughts on developing and operating software.`,
+    description: `Technical blog featuring writings on developing and operating software.`,
     siteUrl: `https://technoblather.ca`,
     social: {
       email: "laakso.mavrick@gmail.com",
+      linkedin: "https://www.linkedin.com/in/mavrick-laakso-41004ab9/",
+      github: "https://github.com/laaksomavrick",
     },
   },
   plugins: [
