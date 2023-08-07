@@ -22,6 +22,7 @@ data "aws_iam_policy_document" "provisioner_policy_document" {
       "iam:GetOpenIDConnectProvider",
       "iam:DeleteOpenIDConnectProvider",
       "iam:UpdateOpenIDConnectProviderThumbprint",
+      "iam:UntagOpenIDConnectProvider",
       "oam:ListSinks",
     ]
     resources = ["*"]
