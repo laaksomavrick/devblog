@@ -15,6 +15,10 @@ module.exports = {
       summary: `He is an experienced software developer with eight years of technical experience.`,
     },
     description: `Technical blog featuring writings on developing and operating software.`,
+<<<<<<< Updated upstream
+=======
+    image: `/seo-image.png`,
+>>>>>>> Stashed changes
     siteUrl: `https://technoblather.ca`,
     social: {
       email: "laakso.mavrick@gmail.com",
