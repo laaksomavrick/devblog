@@ -1,7 +1,7 @@
 ---
 title: Solving Cold Start Timeouts with AWS Lambda and API Gateway
-date: "2023-06-30T00:00:00.000Z"
-description: Wrangle your cold start timeouts to below 30 seconds to facilitate cost-effective APIs with API Gateway and Lambda.
+date: "2023-08-07T00:00:00.000Z"
+description: Wrangle your cold start initialization to below 30 seconds to facilitate cost-effective APIs with API Gateway and Lambda.
 ---
 
 I maintain and operate a set of [Lambda functions on AWS](https://aws.amazon.com/lambda/), most of which provide the implementation for an [API Gateway](https://aws.amazon.com/api-gateway/) depended on for an internal tool.
@@ -11,11 +11,12 @@ Recently, I worked to address what felt like a recurring ghost haunting the inte
 These errors had to be reported anecdotally - our logging and alerting showed nothing going awry and our metrics were still evolving.
 So, with some downtime, I took it upon myself to discover what was going on and hopefully learn something in the process.
 
-## Starting with some data
+## Be data-driven
 
 I strongly believe the best way to improve something is to first measure it.
-To this point, I had suspected something was going on, but the timeouts were infrequent and hard to reproduce.
+To this point, I had suspected something strange was going on with our tool, but the timeouts were infrequent and hard to reproduce.
 I wanted data to prove that this problem was actually happening, to gauge its severity, and to orient myself with what may be causing it.
+
 Given the API Gateway was the service timing out, it made sense to first investigate what its metrics could tell us about the problem.
 
 API Gateway offers a [large set of metrics](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-metrics-and-dimensions.html) out of the box.
@@ -26,13 +27,13 @@ I created a visualization in [Cloudwatch](https://aws.amazon.com/cloudwatch/) to
 
 The problem was definitely not in my head: the distribution above shows that the vast majority of requests were being served in a timely manner (errors or otherwise), but some would spike to nearly 30000 milliseconds (our time out threshold).
 
-## The likely problem
+## Follow your intuition
 
 The logs from the API Gateway didn't indicate any issues beyond timeouts occurring at random and no [AWS Health](https://health.aws.amazon.com/health/status) events had occurred for our region and services within this time period.
 
-So, I suspected the problem was with our the implementation of our Lambda functions.
+So, I suspected the problem involved the implementation of our Lambda functions.
 Two scenarios were obvious to me.
-Either the I/O they performed (external network calls) would sometimes spike, causing the timeouts, or the lambdas were slow to re-initialize after being deallocated.
+Either the I/O they performed (external network calls) would sometimes spike, causing the timeouts, or the lambdas were slow to re-initialize after being deallocated (i.e. a slow cold start).
 
 Since we had no observability beyond application logs, I plumbed in [X-Ray](https://aws.amazon.com/xray/) to capture more detailed traces for the Lambda functions and waited for the "ghost" to haunt us again.
 Combined with cross-referencing the API Gateway `IntegrationLatency` metric, pinpointing one of these events was simple.
@@ -53,7 +54,7 @@ Or, we could investigate _why_ the cold starts were taking so long. Was this a p
 Given there were several lambda functions for this internal tool and more on the way, having to configure provisioned concurrency for each seemed to defeat the purpose of using Lambda functions in the first place: we wanted cost savings for infrequently used business processes.
 So, I opted to investigate and attempt to address the core issue.
 
-## Down the rabbit-hole
+## Identify the root cause
 
 I wanted more data about what was happening inside our Lambda functions to properly identify the core issue.
 
@@ -100,7 +101,7 @@ module.exports = (event, context) => {
 
 Some of these modules wrapped third party dependencies which were quite large. So, this was the problem!
 
-## The solution
+## Solve the problem
 
 We had to refactor this large shared module into a set of smaller modules and allow the Lambda functions to import the dependencies they needed piecemeal.
 Doing this meant we would only be importing the dependencies required for each Lambda, reducing the amount of code that needed to be initialized.
@@ -147,7 +148,7 @@ module.exports = (event, context) => {
 }
 ```
 
-## The results
+## Check your work
 
 After having made this change, we re-ran our measurements and observed whether we had fixed the problem.
 

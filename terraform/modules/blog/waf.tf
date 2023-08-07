@@ -10,137 +10,137 @@ resource "aws_wafv2_web_acl" "cf_web_acl" {
     allow {}
   }
 
-#  rule {
-#    name     = "admin-protection-managed-rule"
-#    priority = 100
-#
-#    override_action {
-#      none {}
-#    }
-#
-#    statement {
-#      managed_rule_group_statement {
-#        name        = "AWSManagedRulesAdminProtectionRuleSet"
-#        vendor_name = "AWS"
-#      }
-#    }
-#
-#    visibility_config {
-#      cloudwatch_metrics_enabled = false
-#      metric_name                = "technoblather-cf-web-acl-admin-protection-rule"
-#      sampled_requests_enabled   = true
-#    }
-#  }
-#
-#  rule {
-#    name     = "ip-reputation-managed-rule"
-#    priority = 200
-#
-#    override_action {
-#      none {}
-#    }
-#
-#    statement {
-#      managed_rule_group_statement {
-#        name        = "AWSManagedRulesAmazonIpReputationList"
-#        vendor_name = "AWS"
-#      }
-#    }
-#
-#    visibility_config {
-#      cloudwatch_metrics_enabled = false
-#      metric_name                = "technoblather-cf-web-acl-ip-reputation-rule"
-#      sampled_requests_enabled   = true
-#    }
-#  }
-#
-#  rule {
-#    name     = "anonymous-ip-managed-rule"
-#    priority = 300
-#
-#    override_action {
-#      none {}
-#    }
-#
-#    statement {
-#      managed_rule_group_statement {
-#        name        = "AWSManagedRulesAnonymousIpList"
-#        vendor_name = "AWS"
-#      }
-#    }
-#
-#    visibility_config {
-#      cloudwatch_metrics_enabled = false
-#      metric_name                = "technoblather-cf-web-acl-anonymous-ip-rule"
-#      sampled_requests_enabled   = true
-#    }
-#  }
-#
-#  rule {
-#    name     = "common-managed-rule"
-#    priority = 400
-#
-#    override_action {
-#      none {}
-#    }
-#
-#    statement {
-#      managed_rule_group_statement {
-#        name        = "AWSManagedRulesCommonRuleSet"
-#        vendor_name = "AWS"
-#      }
-#    }
-#
-#    visibility_config {
-#      cloudwatch_metrics_enabled = false
-#      metric_name                = "technoblather-cf-web-acl-common-rule"
-#      sampled_requests_enabled   = true
-#    }
-#  }
-#
-#  rule {
-#    name     = "known-bad-inputs-rule"
-#    priority = 500
-#
-#    override_action {
-#      none {}
-#    }
-#
-#    statement {
-#      managed_rule_group_statement {
-#        name        = "AWSManagedRulesKnownBadInputsRuleSet"
-#        vendor_name = "AWS"
-#      }
-#    }
-#
-#    visibility_config {
-#      cloudwatch_metrics_enabled = false
-#      metric_name                = "technoblather-cf-web-acl-known-bad-inputs-rule"
-#      sampled_requests_enabled   = true
-#    }
-#  }
-#
-#  rule {
-#    name     = "bots-rule"
-#    priority = 600
-#
-#    override_action {
-#      none {}
-#    }
-#
-#    statement {
-#      managed_rule_group_statement {
-#        name        = "AWSManagedRulesBotControlRuleSet"
-#        vendor_name = "AWS"
-#      }
-#    }
-#
-#    visibility_config {
-#      cloudwatch_metrics_enabled = false
-#      metric_name                = "technoblather-cf-web-acl-bots-rule"
-#      sampled_requests_enabled   = true
-#    }
-#  }
+  #  rule {
+  #    name     = "admin-protection-managed-rule"
+  #    priority = 100
+  #
+  #    override_action {
+  #      none {}
+  #    }
+  #
+  #    statement {
+  #      managed_rule_group_statement {
+  #        name        = "AWSManagedRulesAdminProtectionRuleSet"
+  #        vendor_name = "AWS"
+  #      }
+  #    }
+  #
+  #    visibility_config {
+  #      cloudwatch_metrics_enabled = false
+  #      metric_name                = "technoblather-cf-web-acl-admin-protection-rule"
+  #      sampled_requests_enabled   = true
+  #    }
+  #  }
+  #
+  #  rule {
+  #    name     = "ip-reputation-managed-rule"
+  #    priority = 200
+  #
+  #    override_action {
+  #      none {}
+  #    }
+  #
+  #    statement {
+  #      managed_rule_group_statement {
+  #        name        = "AWSManagedRulesAmazonIpReputationList"
+  #        vendor_name = "AWS"
+  #      }
+  #    }
+  #
+  #    visibility_config {
+  #      cloudwatch_metrics_enabled = false
+  #      metric_name                = "technoblather-cf-web-acl-ip-reputation-rule"
+  #      sampled_requests_enabled   = true
+  #    }
+  #  }
+  #
+  #  rule {
+  #    name     = "anonymous-ip-managed-rule"
+  #    priority = 300
+  #
+  #    override_action {
+  #      none {}
+  #    }
+  #
+  #    statement {
+  #      managed_rule_group_statement {
+  #        name        = "AWSManagedRulesAnonymousIpList"
+  #        vendor_name = "AWS"
+  #      }
+  #    }
+  #
+  #    visibility_config {
+  #      cloudwatch_metrics_enabled = false
+  #      metric_name                = "technoblather-cf-web-acl-anonymous-ip-rule"
+  #      sampled_requests_enabled   = true
+  #    }
+  #  }
+  #
+  #  rule {
+  #    name     = "common-managed-rule"
+  #    priority = 400
+  #
+  #    override_action {
+  #      none {}
+  #    }
+  #
+  #    statement {
+  #      managed_rule_group_statement {
+  #        name        = "AWSManagedRulesCommonRuleSet"
+  #        vendor_name = "AWS"
+  #      }
+  #    }
+  #
+  #    visibility_config {
+  #      cloudwatch_metrics_enabled = false
+  #      metric_name                = "technoblather-cf-web-acl-common-rule"
+  #      sampled_requests_enabled   = true
+  #    }
+  #  }
+  #
+  #  rule {
+  #    name     = "known-bad-inputs-rule"
+  #    priority = 500
+  #
+  #    override_action {
+  #      none {}
+  #    }
+  #
+  #    statement {
+  #      managed_rule_group_statement {
+  #        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+  #        vendor_name = "AWS"
+  #      }
+  #    }
+  #
+  #    visibility_config {
+  #      cloudwatch_metrics_enabled = false
+  #      metric_name                = "technoblather-cf-web-acl-known-bad-inputs-rule"
+  #      sampled_requests_enabled   = true
+  #    }
+  #  }
+  #
+  #  rule {
+  #    name     = "bots-rule"
+  #    priority = 600
+  #
+  #    override_action {
+  #      none {}
+  #    }
+  #
+  #    statement {
+  #      managed_rule_group_statement {
+  #        name        = "AWSManagedRulesBotControlRuleSet"
+  #        vendor_name = "AWS"
+  #      }
+  #    }
+  #
+  #    visibility_config {
+  #      cloudwatch_metrics_enabled = false
+  #      metric_name                = "technoblather-cf-web-acl-bots-rule"
+  #      sampled_requests_enabled   = true
+  #    }
+  #  }
 
   rule {
     name     = "rate-based-rule"
