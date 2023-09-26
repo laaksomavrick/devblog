@@ -4,7 +4,7 @@ date: "2023-09-25T00:00:00.000Z"
 description: Solve "RestApiId must be a valid reference to an 'AWS::Serverless::Api' resource in same template" errors when attempting to DRY up your AWS SAM CloudFormation templates.
 ---
 
-_Note: this blog post was originally written for and published by my employer, Test Double, in their [blog](https://blog.testdouble.com/posts/2023-09-25-decomposing-aws-sam-templates/)._
+_Note: this blog post was originally written for my employer, Test Double, in their [blog](https://blog.testdouble.com/posts/2023-09-25-decomposing-aws-sam-templates/)._
 
 As a consultant, our clients often need us to be high-trust partners who solve not only immediate problems but also optimize and improve systems we interact with along the way.
 For this particular client engagement, we functioned as the engineering team and source of technical expertise for a multi-hundred-employee business.
