@@ -1,7 +1,7 @@
 ---
 title: Decompose AWS SAM API Gateway to Lambda binding declarations
 date: "2023-09-25T00:00:00.000Z"
-description: Your unofficial workaround for 'RestApiId must be a valid reference' errors when attempting to DRY up your CloudFormation.
+description: Solve "RestApiId must be a valid reference to an 'AWS::Serverless::Api' resource in same template" errors when attempting to DRY up your AWS SAM CloudFormation templates.
 ---
 
 _Note: this blog post was originally written for and published by my employer, Test Double, in their [blog](https://blog.testdouble.com/posts/2023-09-25-decomposing-aws-sam-templates/)._
