@@ -50,7 +50,7 @@ const Bio = () => {
           {author.summary}
           {` `}
           Find him on <a href={social.linkedin}>LinkedIn</a>,{" "}
-          <a href={social.github}>Github</a>, or via{" "}
+          <a href={social.github}>GitHub</a>, or via{" "}
           <a href={`mailto:${social.email}`}>email</a>.
         </p>
       )}
