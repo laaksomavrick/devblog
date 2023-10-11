@@ -1,7 +1,7 @@
 ---
 title: Speed up Docker builds for your Node.js Lambda functions
 date: "2023-09-25T00:00:00.000Z"
-description: Learn how I achieved a 1000% decrease in build times from a few lines worth of code changes in my npm workspace.
+description: Learn how I achieved a 6000% decrease in build times from a few lines worth of code changes in my npm workspace.
 ---
 
 preamble - dev feedback cycle was slow when making changes in common, docker build was a big reason
@@ -74,8 +74,6 @@ COPY --from=builder ${LAMBDA_TASK_ROOT}/src/${LAMBDA_DIRECTORY_NAME}/dist ${LAMB
 ENTRYPOINT /lambda-entrypoint.sh dist/app.lambdaHandler
 ```
 
-note the problem 
-
 ## Like an onion
 
 A docker image is [a set of layers](https://docs.docker.com/build/guide/layers/), with each instruction in the `Dockerfile` generally translating to a new layer.
@@ -89,7 +87,7 @@ Using the `docker buildx build` command, I was able to see the amount of time sp
 
 ```shell
 $ docker buildx build --build-arg LAMBDA_DIRECTORY_NAME=lambda1 .
-[+] Building 30.2s (14/15)
+[+] Building 34.2s (14/15)
  => [internal] load build definition from Dockerfile                                                                                           0.0s
  => => transferring dockerfile: 721B                                                                                                           0.0s
  => [internal] load .dockerignore                                                                                                              0.0s
@@ -99,7 +97,7 @@ $ docker buildx build --build-arg LAMBDA_DIRECTORY_NAME=lambda1 .
  => => transferring context: 1.43MB                                                                                                            0.1s
  => [builder 1/9] FROM public.ecr.aws/lambda/nodejs:18@sha256:50f22b7077c7fbb7be2720fb228462e332850a4cd48b4132ffc3c171603ab191                 0.0s
  => CACHED [builder 2/9] WORKDIR /var/task                                                                                                     0.0s
- => CACHED [builder 3/9] RUN npm install -g npm@9                                                                                              0.0s
+ => [builder 3/9] RUN npm install -g npm@9                                                                                                     5.1s
  => [builder 4/9] COPY package.json package.json                                                                                               0.0s
  => [builder 5/9] COPY package-lock.json package-lock.json                                                                                     0.0s
  => [builder 6/9] COPY src/common src/common                                                                                                   0.0s
@@ -117,7 +115,7 @@ explain the problem with links to docs
 
 show the fix
 
-Installing a new dependency still required rerunning `npm ci`, meaning it took a moment.
+Installing a new dependency still required rerunning `npm ci`, meaning it took a second (or thirty of them more often).
 However, modifying code in `common`, which happened much more frequently while undergoing our dev feedback cycle, did not trigger `npm ci` anymore.
 So, we could author and deploy code changes to a development environment much more quickly:
 
@@ -140,10 +138,10 @@ So, we could author and deploy code changes to a development environment much mo
  => CACHED [builder  8/13] COPY src/common/config src/common/config                                                                            0.0s
  => CACHED [builder  9/13] COPY src/common/src src/common/src                                                                                  0.0s
  => CACHED [builder 10/13] COPY src/common/module1.js      src/common/module2.js       src/common                                              0.0s
- => CACHED [builder 11/13] COPY src/lambda1/src src/lambda1/src/                                                                               0.0s
- => CACHED [builder 12/13] COPY src/lambda1/app.js src/lambda1/                                                                                0.0s
- => CACHED [builder 13/13] RUN LAMBDA_DIRECTORY_NAME=lambda1 npm run build                                                                     0.0s
- => CACHED [stage-1 3/3] COPY --from=builder /var/task/src/lambda1/dist /var/task/dist                                                         0.0s
+ => [builder 11/13] COPY src/lambda1/src src/lambda1/src/                                                                                      0.0s
+ => [builder 12/13] COPY src/lambda1/app.js src/lambda1/                                                                                       0.0s
+ => [builder 13/13] RUN LAMBDA_DIRECTORY_NAME=lambda1 npm run build                                                                            0.9s
+ => [stage-1 3/3] COPY --from=builder /var/task/src/lambda1/dist /var/task/dist                                                                0.0s
  => exporting to image                                                                                                                         0.0s
  => => exporting layers                                                                                                                        0.0s
  => => writing image sha256:716193841c31688bfd4a4b08f81735accb2d5f047c9d33fd1d31461b935ecfe4                                                   0.0s
