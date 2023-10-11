@@ -1,0 +1,155 @@
+---
+title: Speed up Docker builds for your Node.js Lambda functions
+date: "2023-09-25T00:00:00.000Z"
+description: Learn how I achieved a 1000% decrease in build times from a few lines worth of code changes in my npm workspace.
+---
+
+preamble - dev feedback cycle was slow when making changes in common, docker build was a big reason
+
+## Finding the problem
+
+Iterative improvement is the name of the game, so rather than blaming my prior self for authoring a slow `Dockerfile`, I wanted to understand what the problem was and then investigate how to resolve it.
+The codebase I was working in contained a large number of Lambda functions and their source code with their dependencies managed via [npm workspaces](https://docs.npmjs.com/cli/v10/using-npm/workspaces?v=true).
+Further, a `common` module provided shared functionality across the codebase: writing to a database, making API calls, processing errors, and so forth.
+
+```shell
+$ tree .
+.
+├── Dockerfile
+├── package-lock.json
+├── package.json
+├── src
+│   ├── common
+│   │   ├── module1.js
+│   │   ├── module2.js
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   ├── module1
+│   │   │   │   └── index.js
+│   │   │   ├── module2
+│   │   │   │   ├── index.js
+│   ├── lambda1
+│   │   ├── app.js
+│   │   ├── package.json
+│   │   └── src
+│   │       ├── handler.js
+│   │       ├── handler.spec.js
+│   │       └── index.js
+│   ├── lambda2
+│   │   ├── app.js
+│   │   ├── package.json
+│   │   └── src
+│   │       ├── handler.js
+│   │       ├── handler.spec.js
+│   │       └── index.js
+```
+
+Our Dockerfile copied in the relevant Lambda source and the common directory, installed the dependencies, ran a build with `esbuild`, and copied the output artifacts into the deployment image: 
+
+```Dockerfile
+ARG LAMBDA_DIRECTORY_NAME
+
+# Builder image
+FROM public.ecr.aws/lambda/nodejs:18 as builder
+ARG LAMBDA_DIRECTORY_NAME
+WORKDIR ${LAMBDA_TASK_ROOT}
+
+RUN npm install -g npm@9
+
+COPY package.json package.json
+COPY package-lock.json package-lock.json
+COPY src/common src/common
+COPY src/${LAMBDA_DIRECTORY_NAME} src/${LAMBDA_DIRECTORY_NAME}
+
+RUN npm ci
+RUN LAMBDA_DIRECTORY_NAME=${LAMBDA_DIRECTORY_NAME} npm run build
+
+# Deployment image
+FROM public.ecr.aws/lambda/nodejs:18
+ARG LAMBDA_DIRECTORY_NAME
+WORKDIR ${LAMBDA_TASK_ROOT}
+
+COPY --from=builder ${LAMBDA_TASK_ROOT}/src/${LAMBDA_DIRECTORY_NAME}/dist ${LAMBDA_TASK_ROOT}/dist
+
+ENTRYPOINT /lambda-entrypoint.sh dist/app.lambdaHandler
+```
+
+note the problem 
+
+## Like an onion
+
+A docker image is [a set of layers](https://docs.docker.com/build/guide/layers/), with each instruction in the `Dockerfile` generally translating to a new layer.
+Docker caches these layers on repeated builds and does its best to rebuild only what has been changed, making your build faster.
+This is like an ordered list, or a dependency chain.
+Changing a file that is referenced in the first instruction (at the start of the list) of your Dockerfile means everything after must be rebuilt.
+Changing a file that is referenced in the last instruction (at the end of the list)  of your Dockerfile means only that instruction must be re-invoked.
+
+So, I wanted to know where the time was being spent in building the image.
+Using the `docker buildx build` command, I was able to see the amount of time spent running each instruction:
+
+```shell
+$ docker buildx build --build-arg LAMBDA_DIRECTORY_NAME=lambda1 .
+[+] Building 30.2s (14/15)
+ => [internal] load build definition from Dockerfile                                                                                           0.0s
+ => => transferring dockerfile: 721B                                                                                                           0.0s
+ => [internal] load .dockerignore                                                                                                              0.0s
+ => => transferring context: 2B                                                                                                                0.0s
+ => [internal] load metadata for public.ecr.aws/lambda/nodejs:18                                                                              30.2s
+ => [internal] load build context                                                                                                              0.1s
+ => => transferring context: 1.43MB                                                                                                            0.1s
+ => [builder 1/9] FROM public.ecr.aws/lambda/nodejs:18@sha256:50f22b7077c7fbb7be2720fb228462e332850a4cd48b4132ffc3c171603ab191                 0.0s
+ => CACHED [builder 2/9] WORKDIR /var/task                                                                                                     0.0s
+ => CACHED [builder 3/9] RUN npm install -g npm@9                                                                                              0.0s
+ => [builder 4/9] COPY package.json package.json                                                                                               0.0s
+ => [builder 5/9] COPY package-lock.json package-lock.json                                                                                     0.0s
+ => [builder 6/9] COPY src/common src/common                                                                                                   0.0s
+ => [builder 7/9] COPY src/lambda1 src/lambda1                                                                                                 0.0s
+ => [builder 8/9] RUN npm ci                                                                                                                  29.1s
+ => [builder 9/9] RUN LAMBDA_DIRECTORY_NAME=lambda1 npm run build                                                                              0.6s
+ => [stage-1 3/3] COPY --from=builder /var/task/src/lambda1/dist /var/task/dist                                                                0.0s
+ => exporting to image                                                                                                                         0.0s
+ => => exporting layers                                                                                                                        0.0s
+ => => writing image sha256:a8095a1267ddf2a08d53525231565087e1d575a38b41eb9c6eddb331d977c591                                                   0.0s
+```
+
+
+explain the problem with links to docs
+
+show the fix
+
+Installing a new dependency still required rerunning `npm ci`, meaning it took a moment.
+However, modifying code in `common`, which happened much more frequently while undergoing our dev feedback cycle, did not trigger `npm ci` anymore.
+So, we could author and deploy code changes to a development environment much more quickly:
+
+```Dockerfile
+[+] Building 0.5s (18/19)
+ => [internal] load build definition from Dockerfile                                                                                           0.0s
+ => => transferring dockerfile: 1.29kB                                                                                                         0.0s
+ => [internal] load .dockerignore                                                                                                              0.0s
+ => => transferring context: 2B                                                                                                                0.0s
+ => [internal] load metadata for public.ecr.aws/lambda/nodejs:18                                                                               0.4s
+ => [builder  1/13] FROM public.ecr.aws/lambda/nodejs:18@sha256:50f22b7077c7fbb7be2720fb228462e332850a4cd48b4132ffc3c171603ab191               0.0s
+ => [internal] load build context                                                                                                              0.1s
+ => => transferring context: 475.68kB                                                                                                          0.0s
+ => CACHED [builder  2/13] WORKDIR /var/task                                                                                                   0.0s
+ => CACHED [builder  3/13] RUN npm install -g npm@9                                                                                            0.0s
+ => CACHED [builder  4/13] COPY package.json package-lock.json ./                                                                              0.0s
+ => CACHED [builder  5/13] COPY src/common/package.json src/common/package.json                                                                0.0s
+ => CACHED [builder  6/13] COPY src/lambda1/package.json src/lambda1/package.json                                                              0.0s
+ => CACHED [builder  7/13] RUN npm ci                                                                                                          0.0s
+ => CACHED [builder  8/13] COPY src/common/config src/common/config                                                                            0.0s
+ => CACHED [builder  9/13] COPY src/common/src src/common/src                                                                                  0.0s
+ => CACHED [builder 10/13] COPY src/common/module1.js      src/common/module2.js       src/common                                              0.0s
+ => CACHED [builder 11/13] COPY src/lambda1/src src/lambda1/src/                                                                               0.0s
+ => CACHED [builder 12/13] COPY src/lambda1/app.js src/lambda1/                                                                                0.0s
+ => CACHED [builder 13/13] RUN LAMBDA_DIRECTORY_NAME=lambda1 npm run build                                                                     0.0s
+ => CACHED [stage-1 3/3] COPY --from=builder /var/task/src/lambda1/dist /var/task/dist                                                         0.0s
+ => exporting to image                                                                                                                         0.0s
+ => => exporting layers                                                                                                                        0.0s
+ => => writing image sha256:716193841c31688bfd4a4b08f81735accb2d5f047c9d33fd1d31461b935ecfe4                                                   0.0s
+```
+
+
+observe the change via buildx output
+
+takeaways for anyone using Docker
