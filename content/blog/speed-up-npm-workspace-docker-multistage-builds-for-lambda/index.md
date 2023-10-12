@@ -1,15 +1,15 @@
 ---
-title: Speed up Docker builds for your Node.js Lambda functions
-date: "2023-09-25T00:00:00.000Z"
-description: Learn how I achieved a 6000% decrease in build times from a few lines worth of code changes in my npm workspace.
+title: Speeding up Docker builds for Node.js Lambda functions
+date: "2023-10-12T00:00:00.000Z"
+description: Decrease your Docker build times with a few lines worth of code changes by 1000% (more or less).
 ---
 
 Docker's ubiquity presently is not without warrant: pretty much every deployment process I've seen in the past five years of my career has leveraged it to generate images for deployments.
 Amazon's ECS, Google's Cloud Run, and Kubernetes in general all have images and containers at their core. 
 So, accordingly, my present project (a serverless backend leveraging AWS Lambda) uses Docker to package the functions that are invoked.
 
-This generally works great - what we author on our local environments corresponds to what we see in our cloud development environments, in staging, and in production.
-Our typical developer lifecycle is to author a change locally, test it locally, deploy the image to a image repository, and then use that image to deploy a container to a dev cloud environment to validate the changes in a serverless environment.
+This generally works great - what we author in our local environments corresponds to what we see in our cloud development environments, in staging, and in production.
+Our typical developer lifecycle is to author a change locally, test it locally, deploy the image to an image repository, and then use that image to deploy a container to a dev cloud environment to validate the changes in a serverless environment.
 However, one component of this kept bothering me.
 
 Docker builds can be *slow*.
@@ -89,7 +89,7 @@ ENTRYPOINT /lambda-entrypoint.sh dist/app.lambdaHandler
 
 A docker image is [a set of layers](https://docs.docker.com/build/guide/layers/), with each instruction in the `Dockerfile` generally translating to a new layer.
 Docker caches these layers on repeated builds and does its best to rebuild only what has been changed, making your build faster.
-This is like an ordered list, or a dependency chain, or an onion (if you prefer).
+This is like an ordered list, a dependency chain, or an onion (if you prefer).
 Changing a file that is referenced in the first instruction (at the start of the list) of your Dockerfile means everything after must be rebuilt.
 Changing a file that is referenced in the last instruction (at the end of the list)  of your Dockerfile means only that instruction must be re-invoked.
 
@@ -212,5 +212,5 @@ $ docker buildx build --build-arg LAMBDA_DIRECTORY_NAME=lambda1 .
  => => writing image sha256:716193841c31688bfd4a4b08f81735accb2d5f047c9d33fd1d31461b935ecfe4                                                   0.0s
 ```
 
-Devs are happiest when they're working and not waiting, so I considered this a win for our team health and for our productivity.
-If you're suffering from slow builds, I invite you to examine your Dockerfiles and to think about how to order the instructions to optimize for caching slow steps.
+Devs are happiest when they're working and not waiting, so I considered this a win for our team's health and for our productivity.
+If you're suffering from slow builds, I invite you to examine your Dockerfiles and think about how to order the instructions to optimize for caching slow steps.
