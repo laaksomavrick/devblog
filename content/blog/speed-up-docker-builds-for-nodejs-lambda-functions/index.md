@@ -5,22 +5,26 @@ description: Decrease your Docker build times with a few lines worth of code cha
 ---
 
 Docker's ubiquity presently is not without warrant: pretty much every deployment process I've seen in the past five years of my career has leveraged it to generate images for deployments.
-Amazon's ECS, Google's Cloud Run, and Kubernetes in general all have images and containers at their core. 
+Amazon's ECS, Google's Cloud Run, and Kubernetes all have images and containers at their core. 
+Cloud native is the de-facto standard.
 So, accordingly, my present project (a serverless backend leveraging AWS Lambda) uses Docker to package the functions that are invoked.
 
 This generally works great - what we author in our local environments corresponds to what we see in our cloud development environments, in staging, and in production.
 Our typical developer lifecycle is to author a change locally, test it locally, deploy the image to an image repository, and then use that image to deploy a container to a dev cloud environment to validate the changes in a serverless environment.
-However, one component of this kept bothering me.
+However, one component of this process was a recurring thorn in our side.
 
 Docker builds can be *slow*.
+
 Particularly on this project, making a change could take upwards of a few minutes when rebuilding the Docker image to then deploy a container to a dev cloud environment.
-So, make a change, and then break your flow until the build finishes.
-With some downtime between tasks, I wanted to fix this to improve the developer experience of this project.
+So, make a change, break your flow until the build finishes, and then forget everything you were doing.
+Or worse, get distracted.
+
+With some downtime between tasks, I wanted to fix this to improve the developer experience of the project.
 
 ## Getting the lay of the land
 
 Iterative improvement is the name of the game, so rather than accepting a slow `Dockerfile`, I wanted to understand what the problem was and then investigate how to resolve it.
-The codebase I was working in contained a large number of Lambda functions and their source code with their dependencies managed via [npm workspaces](https://docs.npmjs.com/cli/v10/using-npm/workspaces?v=true).
+This project's codebase contained a large number of Lambda functions and their source code with their dependencies managed via [npm workspaces](https://docs.npmjs.com/cli/v10/using-npm/workspaces?v=true).
 Further, a `common` module provided shared functionality across the codebase: writing to a database, making API calls, processing errors, and so forth.
 
 ```shell
@@ -55,7 +59,7 @@ $ tree .
 │   │       └── index.js
 ```
 
-Our Dockerfile copied in the relevant Lambda source and the common directory, installed the dependencies, ran a build with `esbuild`, and copied the output artifacts into the deployment image: 
+Our Dockerfile copied in the ENV-provided Lambda source and the common directory, installed its dependencies, ran a build with `esbuild`, and copied the output build artifact into the deployment image: 
 
 ```Dockerfile
 ARG LAMBDA_DIRECTORY_NAME
@@ -89,9 +93,10 @@ ENTRYPOINT /lambda-entrypoint.sh dist/app.lambdaHandler
 
 A docker image is [a set of layers](https://docs.docker.com/build/guide/layers/), with each instruction in the `Dockerfile` generally translating to a new layer.
 Docker caches these layers on repeated builds and does its best to rebuild only what has been changed, making your build faster.
+
 This is like an ordered list, a dependency chain, or an onion (if you prefer).
-Changing a file that is referenced in the first instruction (at the start of the list) of your Dockerfile means everything after must be rebuilt.
-Changing a file that is referenced in the last instruction (at the end of the list)  of your Dockerfile means only that instruction must be re-invoked.
+Changing a file that is referenced in the first instruction (at the start of the list) of your Dockerfile means everything after must be re-executed.
+Changing a file that is referenced in the last instruction (at the end of the list) of your Dockerfile means only that instruction must be re-executed.
 
 So, I wanted to know where the time was being spent in building the image.
 Using the `docker buildx build` command, I was able to see the amount of time spent running each instruction:
@@ -124,17 +129,21 @@ $ docker buildx build --build-arg LAMBDA_DIRECTORY_NAME=lambda1 .
 ## The problem
 
 It looked like the bulk of our time was spent running `npm ci`.
-The bulk of our logic lived in our `common` directory, so that was the code that most frequently changed.
-And, whenever we made a change to `common`, our `npm ci` build instruction was re-executed.
+
+The majority of our logic and functionality lived in our `common` directory, so that was the code that most frequently changed.
+
+Whenever we made a change to `common`, our `npm ci` build instruction was re-executed.
 Further, since `common` functions as a shared library across our code, and this `Dockerfile` was common to all our Lambda functions, any dependent Lambdas would also have to be rebuilt in order to deploy.
 
-So, every time we made a code change in `common`, for every Lambda, we had to re-invoke `npm ci`, leading to our slow builds. 
+So, every time we made a code change in `common`, for every Lambda, we had to re-invoke `npm ci`, leading to our slow builds, and our frequent coffee breaks. 
 
 ## The solution
 
 Remember how Docker is like an onion?
+
 We only needed to re-execute `npm ci` when a dependency was added, modified, or changed.
 So, modifying our `Dockerfile` to copy `package.json` and `package-lock.json`, executing the `npm ci` step, and then copying over our source code should result in the slow step being cached for our general case (modifying `common`). 
+
 We can observe this change from the following Dockerfile:
 
 ```Dockerfile
