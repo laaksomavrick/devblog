@@ -1,11 +1,11 @@
 ---
 title: Speeding up Docker builds for Node.js Lambda functions
 date: "2023-10-12T00:00:00.000Z"
-description: Decrease your Docker build times with a few lines worth of code changes by 1000% (more or less).
+description: Decrease your Docker build times with a few lines of changes by 1000% (more or less).
 ---
 
 Docker's ubiquity presently is not without warrant: pretty much every deployment process I've seen in the past five years of my career has leveraged it to generate images for deployments.
-Amazon's ECS, Google's Cloud Run, and Kubernetes all have images and containers at their core. 
+Amazon's ECS, Google's Cloud Run, and Kubernetes all have images and containers at their core.
 Cloud native is the de-facto standard.
 So, accordingly, my present project (a serverless backend leveraging AWS Lambda) uses Docker to package the functions that are invoked.
 
@@ -13,7 +13,7 @@ This generally works great - what we author in our local environments correspond
 Our typical developer lifecycle is to author a change locally, test it locally, deploy the image to an image repository, and then use that image to deploy a container to a dev cloud environment to validate the changes in a serverless environment.
 However, one component of this process was a recurring thorn in our side.
 
-Docker builds can be *slow*.
+Docker builds can be _slow_.
 
 Particularly on this project, making a change could take upwards of a few minutes when rebuilding the Docker image to then deploy a container to a dev cloud environment.
 So, make a change, break your flow until the build finishes, and then forget everything you were doing.
@@ -59,7 +59,7 @@ $ tree .
 │   │       └── index.js
 ```
 
-Our Dockerfile copied in the ENV-provided Lambda source and the common directory, installed its dependencies, ran a build with `esbuild`, and copied the output build artifact into the deployment image: 
+Our Dockerfile copied in the ENV-provided Lambda source and the common directory, installed its dependencies, ran a build with `esbuild`, and copied the output build artifact into the deployment image:
 
 ```Dockerfile
 ARG LAMBDA_DIRECTORY_NAME
@@ -135,14 +135,14 @@ The majority of our logic and functionality lived in our `common` directory, so 
 Whenever we made a change to `common`, our `npm ci` build instruction was re-executed.
 Further, since `common` functions as a shared library across our code, and this `Dockerfile` was common to all our Lambda functions, any dependent Lambdas would also have to be rebuilt in order to deploy.
 
-So, every time we made a code change in `common`, for every Lambda, we had to re-invoke `npm ci`, leading to our slow builds, and our frequent coffee breaks. 
+So, every time we made a code change in `common`, for every Lambda, we had to re-invoke `npm ci`, leading to our slow builds, and our frequent coffee breaks.
 
 ## The solution
 
 Remember how Docker is like an onion?
 
 We only needed to re-execute `npm ci` when a dependency was added, modified, or changed.
-So, modifying our `Dockerfile` to copy `package.json` and `package-lock.json`, executing the `npm ci` step, and then copying over our source code should result in the slow step being cached for our general case (modifying `common`). 
+So, modifying our `Dockerfile` to copy `package.json` and `package-lock.json`, executing the `npm ci` step, and then copying over our source code should result in the slow step being cached for our general case (modifying `common`).
 
 We can observe this change from the following Dockerfile:
 
@@ -222,4 +222,5 @@ $ docker buildx build --build-arg LAMBDA_DIRECTORY_NAME=lambda1 .
 ```
 
 Devs are happiest when they're working and not waiting, so I considered this a win for our team's health and for our productivity.
+
 If you're suffering from slow builds, I invite you to examine your Dockerfiles and think about how to order the instructions to optimize for caching slow steps.
