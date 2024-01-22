@@ -48,6 +48,9 @@ myproject
         └── __init__.py
 ```
 
+todo
+common, sub1, sub2
+
 ## Don't fight their APIs
 
 My initial inclination was to create three configuration files. 
@@ -66,7 +69,20 @@ Particularly if many subprojects are present in our monorepo, one file containin
 
 It _could_ become a huge mess of a file, but there are a few techniques we can use to keep it modular, DRY (don't-repeat-yourself), and maintainable.
 
+## So where does that leave us?
+
+todo
+file structure, setup:true
+
+## Use the path-filtering orb, Luke
+
+todo
+path filtering, when
+path filter, when, common rebuild all
+
 ## The CI setup
+
+todo remove me
 
 Let's present the recommended structure, the configuration files' contents, and review the techniques present in each:
 
@@ -100,7 +116,7 @@ myproject
         └── __init__.py
 ```
 
-```shell
+```yaml
 $ cat .circleci/config.yml
 
 version: 2.1
@@ -147,7 +163,7 @@ workflows:
 
 ```
 
-```shell
+```yaml
 $ cat .circlci/continue_config.yml
 
 version: 2.1
@@ -214,7 +230,7 @@ commands:
       - run:
           name: Use Acme CLI to deploy to staging 
           command: acme --profile stg deploy
-  deploy-prod-bundle:
+  deploy-to-prod:
     steps:
       - run:
           name: Use Acme CLI to deploy to prod 
@@ -233,30 +249,21 @@ jobs:
     steps:
       - myproject-checkout
       - install-acme-cli
-      - setup-stg-profile
+      - validate
       - deploy-to-stg
       - run:
           name: Some custom command
-          no_output_timeout: 30m
           command: acme --profile stg run something-custom
   subproject-one-deploy-prod:
     <<: *subproject_one_common_settings
     steps:
       - ds-checkout
-      - install-databricks-cli
-      - setup-prod-profile
-      - deploy-prod-bundle
+      - install-acme-cli
+      - validate
+      - deploy-to-prod
       - run:
-          name: Perform model training
-          no_output_timeout: 30m
-          command: databricks -p prod bundle run -t prod funddata-llm
-      - run:
-          name: Update model serving
-          command: ~/datascience_monorepo/.circleci/update_serving_endpoint.sh
-          environment:
-            DATABRICKS_PROFILE: prod
-            SERVING_ENDPOINT_NAME: funddata_qa
-            MODEL_NAME: FundDataQA
+          name: Some custom command
+          command: acme --profile stg run something-custom
             
   # subproject_two
   subproject-two-validate:
@@ -315,12 +322,82 @@ workflows:
 ```
 
 
-
 ## Keep things DRY with the tooling available
+
+YAML isn't a programming language, but it is a declarative configuration language with not-often explored advanced features.
+Some of my favourite features to use are _anchors_, _aliases_, and [merge keys](https://yaml.org/type/merge.html).
+Combined, they allow us to author re-usable snippets in our CircleCI template (and most yaml documents in general):
+
+```yaml
+common_settings: &common_settings
+  executor:
+    name: python/default
+    tag: 3.10.8
+
+subproject_one_common_settings: &subproject_one_common_settings
+  working_directory: ~/myproject/subproject_one
+  <<: *common_settings
+  
+...
+
+jobs:
+  subproject-one-validate:
+    <<: *subproject_one_common_settings
+    steps:
+      - myproject-checkout
+      - install-acme-cli
+      - validate
+
+```
+
+So, if you have repeated snippets of orchestration (and you likely do, given you're working in a monorepo), creating a common block of configuration,
+anchoring it, and then using that anchoring via aliases and merge keys allow you to write it once and run it everywhere, DRYing up your configuration file. 
 
 ## Use filters for branch-based logic
 
-## Use the path-filtering orb, Luke
+I am more familiar with the GitHub Actions style [workflow triggers](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows) to invoke particular workflows
+based on branch conditions. 
+CircleCI offers similar functionality via [filters](https://circleci.com/docs/configuration-reference/#filters).
+For our example project, I wanted to create three different workflows based on branching.
+First, for every pull request and merge, I wanted to run some common tasks (e.g., validate the change has no syntax errors).
+Second, when a change was merged to `main`, and had no git tag, I wanted to deploy it to a staging environment.
+Third, when a change was merged to `prod` and had a tag of the form `v$.$.$`, e.g. `v1.0.0`, I wanted to deploy it to the production environment.
+
+In practice, this looks like:
+
+```yaml
+stg-filters: &stg-filters
+  filters:
+    branches:
+      only: main
+    tags:
+      ignore: /.*/
+
+prod-filters: &prod-filters
+  filters:
+    branches:
+      only: prod
+    tags:
+      only: /^v.*/
+
+...
+
+workflows:
+  subproject-one:
+    jobs:
+      - subproject-one-validate
+      - subproject-one-deploy-stg:
+          requires:
+            - subproject-one-validate
+          <<: *stg-filters
+      - subproject-one-deploy-prod:
+          requires:
+            - subproject-one-validate
+          <<: *prod-filters
+```
+
+Combined with the aforementioned anchoring, aliasing, and merge keys, we can compose a common set of branch based rules to use in our workflows for each subproject included in our monorepo.
+
 
 ## Don't be afraid to offload complex logic into scripts
 
