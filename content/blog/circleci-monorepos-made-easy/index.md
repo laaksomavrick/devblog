@@ -1,6 +1,6 @@
 ---
 title: CircleCI Monorepos Made Easy: Wrangle Your CI/CD Setup with These Tips
-date: "2023-05-14T00:00:00.000Z"
+date: "2024-01-23T00:00:00.000Z"
 description: Monorepos offer many benefits for developer experience but come with their own caveats. Explore a few tips and tricks for setup using CircleCI.
 ---
 
