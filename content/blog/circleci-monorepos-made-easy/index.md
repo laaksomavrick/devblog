@@ -6,7 +6,7 @@ description: Monorepos offer many benefits for developer experience but come wit
 
 ## Preamble
 
-Right off the bat, I will admit: CircleCI is not my favourite CI/CD tool.
+Right off the bat, I will admit: CircleCI is not my favorite CI/CD tool.
 There has been an explosion of new-generation tooling that _isn't_ all hype in this product space which has presented improved ergonomics, functionality, and pricing for developers compared to CircleCI.
 
 However, sometimes, the correct choice isn't what we want but what we have.
@@ -19,7 +19,7 @@ And so, dear reader, I have identified and navigated all the foot-guns and false
 
 ## The project structure
 
-To begin, lets imagine a repository with the following structure:
+To begin, let's imagine a repository with the following structure:
 
 ```shell
 $ tree -a myproject
@@ -65,8 +65,8 @@ These _can_ be stitched together to [create separate files for each project](htt
 However, I would not recommend it, and I migrated away from this approach.
 It was finicky, error-prone, and a maintenance nightmare.
 
-CircleCI's [dynamic configuration](https://circleci.com/docs/dynamic-config/) prescribes creating two files: a `config.yml`, where we can author jobs common to all projects and invoke our project-based workflows, and a `continuation_config.yml`, where we can author our project based jobs and workflows.
-You may be wondering: but won't that become a huge-mess of a file?
+CircleCI's [dynamic configuration](https://circleci.com/docs/dynamic-config/) prescribes creating two files: a `config.yml`, where we can author jobs common to all projects and invoke our project-based workflows, and a `continuation_config.yml`, where we can author our project-based jobs and workflows.
+You may be wondering: but won't that become a huge mess of a file?
 Particularly if many subprojects are present in our monorepo, one file containing many mixed concerns would make most software engineers eager to refactor.
 
 It _could_ become a huge mess of a file, but there are a few techniques we can use to keep it modular, DRY (don't-repeat-yourself), and maintainable.
@@ -153,8 +153,8 @@ Notably, this provided the flexibility to run all workflows when a change occurr
 ## Keep things DRY with the tooling available
 
 YAML isn't a programming language, but it is a declarative configuration language with not-often explored advanced features.
-Some of my favourite features to use are _anchors_, _aliases_, and [merge keys](https://yaml.org/type/merge.html).
-Combined, they allow us to author re-usable snippets in our CircleCI template (and most yaml documents in general):
+Some of my favorite features to use are _anchors_, _aliases_, and [merge keys](https://yaml.org/type/merge.html).
+Combined, they allow us to author re-usable snippets in our CircleCI template (and most `yaml` documents in general):
 
 ```yaml
 common_settings: &common_settings
@@ -179,7 +179,7 @@ jobs:
 ```
 
 So, if you have repeated snippets of orchestration (and you likely do, given you're working in a monorepo), creating a common block of configuration,
-anchoring it, and then using that anchoring via aliases and merge keys allow you to write it once and run it everywhere, DRYing up your configuration file. 
+anchoring it, and then using that anchoring via aliases and merge keys allow us to write it once and run it everywhere, DRYing up your configuration file. 
 
 ## Use filters for branch-based logic
 
@@ -224,12 +224,12 @@ workflows:
           <<: *prod-filters
 ```
 
-Combined with the aforementioned anchoring, aliasing, and merge keys, we can compose a common set of branch based rules to use in our workflows for each subproject included in our monorepo.
+Combined with the aforementioned anchoring, aliasing, and merge keys, we can compose a common set of branch-based rules to use in our workflows for each subproject included in our monorepo.
 
 ## Don't be afraid to offload complex logic into scripts
 
 If you're struggling to fit a complicated step into your job or workflow declarations, offload that logic into a script.
-This can be authored with bash, or even your favourite programming language, for example:
+This can be authored with bash, or even your favorite programming language, for example:
 
 ```shell
 #!/usr/bin/env python
@@ -254,7 +254,7 @@ I know I would rather debug a python script than a hobbling of bash in a CI conf
 
 ## RTFM!
 
-This sounds naive, but consulting the [official documentation](https://circleci.com/docs/configuration-reference/) for a CircleCI configuration file provided me the best information while learning.
+This sounds naive, but consulting the [official documentation](https://circleci.com/docs/configuration-reference/) for a CircleCI configuration file proved to be the best source of information while exploring the tools available.
 Further, it informed me of what options were available to me and provided brief examples for their implementation.
 Googling for answers tended to lead to outdated community answers.
 And using ChatGPT for CircleCI was often flat-out wrong.
