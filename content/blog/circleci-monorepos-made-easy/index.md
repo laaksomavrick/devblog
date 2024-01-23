@@ -48,8 +48,10 @@ myproject
         └── __init__.py
 ```
 
-todo
-common, sub1, sub2
+Two projects (`subproject_one`, `subproject_two`) are independently deployable services, both of which consume a `common` package of library-level code.
+I wanted to orchestrate a CI/CD pipeline such that merging changes to our `main` branch would automatically deploy to staging, and that deploying changes to a `prod` branch would automatically deploy to production.
+Further, I had build and validation steps that were common to all three directories _and_ build, validation, and deployment steps that were unique to each directory.
+Nothing exotic here - for example, I might run a linter across all files and I might build an image for `subproject_one` to a particular Docker repository that is different from `subproject_two`. 
 
 ## Don't fight their APIs
 
@@ -71,82 +73,35 @@ It _could_ become a huge mess of a file, but there are a few techniques we can u
 
 ## So where does that leave us?
 
-todo
-file structure, setup:true
-
-## Use the path-filtering orb, Luke
-
-todo
-path filtering, when
-path filter, when, common rebuild all
-
-## The CI setup
-
-todo remove me
-
-Let's present the recommended structure, the configuration files' contents, and review the techniques present in each:
+First, we need a directory for our CircleCI configuration files and have to note a few particularities. 
 
 ```shell
-$ tree -a myproject
-myproject
 ├── .circleci
 │   ├── config.yml
 │   └── continue_config.yml
-├── .python-version
-├── __init__.py
-├── common
-│   ├── common
-│   │   └── __init__.py
-│   ├── poetry.lock
-│   └── pyproject.toml
-├── poetry.lock
-├── poetry.toml
-├── pyproject.toml
-├── subproject_one
-│   ├── Dockerfile
-│   ├── poetry.lock
-│   ├── pyproject.toml
-│   └── subproject_one
-│       └── __init__.py
-└── subproject_two
-    ├── Dockerfile
-    ├── poetry.lock
-    ├── pyproject.toml
-    └── subproject_two
-        └── __init__.py
 ```
 
-```yaml
-$ cat .circleci/config.yml
+Your `config.yml` file must include a `setup: true` block alongside some [CircleCI-specific configuration](https://circleci.com/docs/dynamic-config/).
+From there, I found a few tools in CircleCI's toolbox to accomplish our task.
 
+## Use the path-filtering orb, Luke
+
+CircleCI's [path filtering orb](https://circleci.com/developer/orbs/orb/circleci/path-filtering) provides functionality for continuing a pipeline based on the paths of changed files.
+Using the `mapping` parameter, we can pass values to variables in our continuation configuration for usage in workflow `when` clauses, providing a mechanism for triggering particular workflows.
+In practice, this will look like:
+
+```yaml
 version: 2.1
 
 setup: true
 
 orbs:
-  python: circleci/python@2.1.1
   path-filtering: circleci/path-filtering@1.0.0
 
 jobs:
   validate-source-code:
-    executor:
-      name: python/default
-      tag: 3.10.8
     steps:
-      - checkout
-      - python/install-packages:
-          pkg-manager: poetry
-      - restore_cache:
-          keys:
-            - v1-deps-{{ .Branch }}-{{ checksum "poetry.lock" }}
-            - v1-deps-{{ .Branch }}
-            - v1-deps
-      - run:
-          name: Check Python formatting
-          command: poetry run black --check .
-      - run:
-          name: Run Python tests
-          command: poetry run pytest -x
+      ...
 
 workflows:
   always-run:
@@ -160,17 +115,9 @@ workflows:
             subproject_two/.* run-subproject-two-workflow true
           base-revision: main
           config-path: .circleci/continue_config.yml
-
 ```
 
 ```yaml
-$ cat .circlci/continue_config.yml
-
-version: 2.1
-
-orbs:
-  python: circleci/python@2.1.1
-
 parameters:
   run-common-workflow:
     type: boolean
@@ -182,112 +129,8 @@ parameters:
     type: boolean
     default: false
 
-common_settings: &common_settings
-  executor:
-    name: python/default
-    tag: 3.10.8
+...
 
-subproject_one_common_settings: &subproject_one_common_settings
-  working_directory: ~/myproject/subproject_one
-  <<: *common_settings
-  
-subproject_two_common_settings: &subproject_two_common_settings
-  working_directory: ~/myproject/subproject_two
-  <<: *common_settings
-
-stg-filters: &stg-filters
-  filters:
-    branches:
-      only: main
-    tags:
-      ignore: /.*/
-
-prod-filters: &prod-filters
-  filters:
-    branches:
-      only: prod
-    tags:
-      only: /^v.*/
-
-commands:
-  myproject-checkout:
-    steps:
-      - checkout:
-          path: ~/myproject
-  install-acme-cli:
-    steps:
-      - run:
-          name: Install Acme CLI
-          command: |
-            curl -fsSL https://raw.githubusercontent.com/acmecli/setup-cli/main/install.sh | sudo sh
-  validate:
-    steps:
-      - run:
-          name: Use Acme CLI to validate our change
-          command: acme --profile stg validate
-  deploy-to-stg:
-    steps:
-      - run:
-          name: Use Acme CLI to deploy to staging 
-          command: acme --profile stg deploy
-  deploy-to-prod:
-    steps:
-      - run:
-          name: Use Acme CLI to deploy to prod 
-          command: acme --profile prod deploy
-
-jobs:
-  # subproject_one
-  subproject-one-validate:
-    <<: *subproject_one_common_settings
-    steps:
-      - myproject-checkout
-      - install-acme-cli
-      - validate
-  subproject-one-deploy-stg:
-    <<: *subproject_one_common_settings
-    steps:
-      - myproject-checkout
-      - install-acme-cli
-      - validate
-      - deploy-to-stg
-      - run:
-          name: Some custom command
-          command: acme --profile stg run something-custom
-  subproject-one-deploy-prod:
-    <<: *subproject_one_common_settings
-    steps:
-      - ds-checkout
-      - install-acme-cli
-      - validate
-      - deploy-to-prod
-      - run:
-          name: Some custom command
-          command: acme --profile stg run something-custom
-            
-  # subproject_two
-  subproject-two-validate:
-    <<: *subproject_two_common_settings
-    steps:
-      - myproject-checkout
-      - install-acme-cli
-      - validate
-  subproject-two-deploy-stg:
-    <<: *subproject_two_common_settings
-    steps:
-      - myproject-checkout
-      - install-acme-cli
-      - setup-stg-profile
-      - deploy-to-stg
-  subproject-two-deploy-prod:
-    <<: *subproject_one_common_settings
-    steps:
-      - myproject-checkout
-      - install-acme-cli
-      - setup-stg-profile
-      - deploy-to-prod
-  
-  
 workflows:
   subproject-one:
     when:
@@ -295,32 +138,17 @@ workflows:
         - equal: [true, << pipeline.parameters.run-subproject-one-workflow >>]
         - equal: [true, << pipeline.parameters.run-common-workflow >>]
     jobs:
-      - subproject-one-validate
-      - subproject-one-deploy-stg:
-          requires:
-            - subproject-one-validate
-          <<: *stg-filters
-      - subproject-one-deploy-prod:
-          requires:
-            - subproject-one-validate
-          <<: *prod-filters
+      ...
   subproject-two:
     when:
       or:
         - equal: [ true, << pipeline.parameters.run-subproject-two-workflow >> ]
         - equal: [true, << pipeline.parameters.run-common-workflow >>]
     jobs:
-      - subproject-two-validate
-      - subproject-two-deploy-stg:
-          requires:
-            - subproject-two-validate
-          <<: *stg-filters
-      - subproject-two-deploy-prod:
-          requires:
-            - subproject-two-validate
-          <<: *prod-filters
+      ...
 ```
 
+Notably, this provided the flexibility to run all workflows when a change occurred in `common` and only run a particular workflow when changes occurred in its subdirectory. 
 
 ## Keep things DRY with the tooling available
 
@@ -398,8 +226,36 @@ workflows:
 
 Combined with the aforementioned anchoring, aliasing, and merge keys, we can compose a common set of branch based rules to use in our workflows for each subproject included in our monorepo.
 
-
 ## Don't be afraid to offload complex logic into scripts
+
+If you're struggling to fit a complicated step into your job or workflow declarations, offload that logic into a script.
+This can be authored with bash, or even your favourite programming language, for example:
+
+```shell
+#!/usr/bin/env python
+import os
+
+NAME = os.environ["NAME"]
+
+print(f"Hello, {NAME}!")
+```
+
+```yaml
+jobs:
+  - run:
+      name: Invoke your complicated logic
+      command: ~/myproject/.circleci/my_script.sh
+      environment:
+        NAME: Bob
+```
+
+For my purposes, this was helpful to orchestrate a sequence of steps that required the usage of an API client given my target did not have a CircleCI orb available.
+I know I would rather debug a python script than a hobbling of bash in a CI configuration file when it inevitably breaks.
 
 ## RTFM!
 
+This sounds naive, but consulting the [official documentation](https://circleci.com/docs/configuration-reference/) for a CircleCI configuration file provided me the best information while learning.
+Further, it informed me of what options were available to me and provided brief examples for their implementation.
+Googling for answers tended to lead to outdated community answers.
+And using ChatGPT for CircleCI was often flat-out wrong.
+So, in this instance, doing things the old-fashioned way paid the most dividends.
