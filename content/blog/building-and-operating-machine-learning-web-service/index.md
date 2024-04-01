@@ -103,16 +103,19 @@ It is not important that the scoring be high, but that the scoring is better rel
 
 Of note: a recurring theme of this project which became apparent during this stage was that you should only change one variable at a time when evaluating these models.
 Further, pay particular attention to making sure all your operations are determinate - operations that can have a different result depending on the environment or context _will_ ruin your day.
-In other words, seed random to `42`!
+In other words, seed random to `42`.
 
 ## Serving the model
 
 Having decided upon a model and with a smattering of Python scattered through notebooks, I set upon figuring out how to use this model for a web service.
 First off, and I only know this now in retrospect: your model training architecture and your model serving architecture are two separate things, and should be treated as such.
+
 With this in mind, I wanted to leverage AWS given their higher level offerings for machine learning workloads and my familiarity with their platform.
 Furthermore, I wanted to use serverless technologies as much as possible given their pay-as-you-go billing model and expectation of this hobby project being very low traffic (i.e., probably just me).
 
-### Model training
+And so, let's overview the training and serving architectures.
+
+### Easier than training a pet
 
 The model training system is more-or-less a unidirectional data pipeline. It can be triggered manually or automated via the `aws` cli.
 
@@ -165,7 +168,9 @@ A recurring thorn in my side during the development of this project was that Sag
 Expected, given AWS offerings are usually treated as a first-class citizen in comparison to open source or third party tooling.
 If you're attempting to do something similar (such as use `scikit-learn` algorithms in AWS), the above referenced source code is a good working example.
 
-### Model serving
+### Server-less than good
+
+(But still not bad, which is good enough.)
 
 I wanted to create a front-end that could query this model so that I could build a user-facing product from it.
 In addition to just querying the model directly, I wanted to orchestrate mapping television show names from user inputs to their ids in the system, or creating a new show if none was found.
@@ -237,6 +242,24 @@ As a result, I had to use a worse-performing model, a graph generated leveraging
 Note to self: consider the infrastructure constraints you have when running any workload ahead of time.
 
 ## Operating the model
+
+First and foremost, and as mentioned: decouple your training and service architecture.
+Do this at the logic level.
+Do this at the infrastructure level.
+I had to refactor my Cloudformation stack half way through developing the project and it was a [real PITA](https://github.com/laaksomavrick/canihasashowplz/blob/main/Makefile).
+
+Secondly: version your data just like you would version your code.
+If your source code changes, your model changes.
+If your data changes, your model changes.
+As a consequence, the way you handle your data should be equivalent to the way you handle your code.
+It's essential to have a copy of your data from each deployment in case of a disaster recovery or error-uptick situation.
+Moreover, having a copy of your data means debugging model-rot or hallucinations is much easier after the fact. 
+
+And lastly: deploying this beast resulted in one of the [gnarliest pipelines](https://github.com/laaksomavrick/canihasashowplz/blob/main/.github/workflows/deploy_sam.yaml) I have authored to date.
+Probably nothing compared to what some of witnessed between `bash` and `Jenkins`, but I've always been a 3-tier architecture kind of guy and so this represented a new dimension of complication. 
+
+TODO: make mermaid
+
 - decouple your training and serving architecture 
 - version your data just like you would your source code
 - consider orchestrating end to end deployments with webhooks to save on compute time
