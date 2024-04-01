@@ -47,8 +47,8 @@ Given my goal of a recommendation engine based on user preferences, I needed dat
 - Had a feature indicating user preference (e.g., show `10` has reviews by both user `A` and user `B`)
 
 So, I settled on [scraping IMDB's reviews](https://github.com/laaksomavrick/tv-show-recommender-exploration/blob/main/data/ratings/ratings/spiders/ratings_spider.py) given the capability to sort that data by the highest volume of reviews.
-I combined this with their [publicy available](https://developer.imdb.com/non-commercial-datasets/) data set, allowing me to create a relationship between a television show, users, and their reviews (which conveniently had a number value).
-Further, given I scraped only the most reviewed shows, I figured I would have a data set that was "dense" enough (i.e., enough user-review associations) to give at-least-okay recommendations.
+I combined this with their [publicly available](https://developer.imdb.com/non-commercial-datasets/) data set, allowing me to create a relationship between a television show, users, and their reviews (which conveniently had a number value).
+Further, given I [scraped only the most reviewed shows](https://github.com/laaksomavrick/tv-show-recommender-exploration/blob/main/data/ratings/ratings/spiders/ratings_spider.py), I figured I would have a data set that was "dense" enough (i.e., enough user-review associations) to give at-least-okay recommendations.
 
 After a few days and evenings running my scraper 24/7, I had around 500,000 reviews, which felt like a good enough number (and mostly I wanted to get on with it).
 In retrospect, the more data, the better your results will be.
@@ -83,6 +83,7 @@ Furthermore, there remained a few variants of the model I experimented with (why
 - A random forest classifier, just for fun
 
 Training the model was the easiest part of this whole process (it's really just a few lines of python) - who would have thought?
+My data set (500,000) was small enough that doing this work on my local machine was still tenable.
 
 ### Being picky
 
@@ -106,13 +107,134 @@ In other words, seed random to `42`!
 
 ## Serving the model
 
+Having decided upon a model and with a smattering of Python scattered through notebooks, I set upon figuring out how to use this model for a web service.
+First off, and I only know this now in retrospect: your model training architecture and your model serving architecture are two separate things, and should be treated as such.
+With this in mind, I wanted to leverage AWS given their higher level offerings for machine learning workloads and my familiarity with their platform.
+Furthermore, I wanted to use serverless technologies as much as possible given their pay-as-you-go billing model and expectation of this hobby project being very low traffic (i.e., probably just me).
+
 ### Model training
+
+The model training system is more-or-less a unidirectional data pipeline. It can be triggered manually or automated via the `aws` cli.
+
+```mermaid
+flowchart
+
+    Trigger(Lambda function trigger)
+    RatingTable(Rating table)
+    RatingsBucket(Ratings bucket)
+    ModelBucket(Model bucket)
+    RatingsExporter(Ratings export fn)
+    ModelTrainer(Model trainer fn)
+    ModelTraining(Model training image)
+    RatingTable(Rating table)
+    Model(Model)
+       
+    subgraph RatingsOutputCsv
+        RatingsExporter -->|Reads| RatingTable
+    end
+    
+    subgraph RatingsBucket
+    end
+    
+    subgraph ModelTrainingWorkflow
+        ModelTrainer -->|Invokes| ModelTraining
+        ModelTraining -->|Stores output model| ModelBucket
+        ModelBucket --> Model
+    end
+ 
+    Trigger -->|Invokes| RatingsOutputCsv
+    RatingsOutputCsv -->|Stores file| RatingsBucket
+    RatingsBucket -->|Reads file| ModelTrainingWorkflow
+```
+
+Let's break this down.
+
+All the data for user ratings is stored in the `RatingsTable`, which is a `DynamoDB` table.
+When a user inputs the shows they like to generate recommendations, that counts as a positive rating.
+So, as users request television show recommendations, they are feeding the model with data to improve its recommendations.
+
+A [lambda function](https://github.com/laaksomavrick/canihasashowplz/blob/main/ratings_exporter/ratings_exporter/app.py) is called to trigger exporting this table as a `.csv` to the `RatingsBucket` `S3` bucket.
+
+Once that process is done (and it can take a bit depending on the amount of data), [another lambda function](https://github.com/laaksomavrick/canihasashowplz/blob/main/model_trainer/model_trainer/app.py) is invoked to kick off the [model training work](https://github.com/laaksomavrick/canihasashowplz/blob/main/model_training/train.py).
+There was no way to orchestrate this unit of work via the `aws` CLI, hence using a function instead.
+
+The model training job takes around an hour with my relatively small data set, and the unit of compute for that hour is expensive.
+So, I orchestrated this workflow to only occur when I want it to (i.e. triggered) instead of having it repeatedly train and output a new model as new data is ingested.
+
+A recurring thorn in my side during the development of this project was that SageMaker's bring-your-own-model APIs weren't very well documented compared to their in-platform offerings.
+Expected, given AWS offerings are usually treated as a first-class citizen in comparison to open source or third party tooling.
+If you're attempting to do something similar (such as use `scikit-learn` algorithms in AWS), the above referenced source code is a good working example.
 
 ### Model serving
 
-- Model predictions can take a while, choose an architecture that can accommodate long-running tasks (e.g. queue)
-- be mindful of cost of compute/memory for your model; wanted to use serverless for cost savings but initial model memory usage was too big
-- sagemaker encourages using their tools - byom is not well documented 
+I wanted to create a front-end that could query this model so that I could build a user-facing product from it.
+In addition to just querying the model directly, I wanted to orchestrate mapping television show names from user inputs to their ids in the system, or creating a new show if none was found.
+Further, I wanted to store each set of user preferences as data to continue to train the model.
+Given this, some logic was required on the backend, and so an architecture to accommodate was built:
+
+```mermaid
+flowchart
+
+    Client(Client SPA)
+
+    APIGW(Api Gateway)
+
+    PredictionAck(Prediction Ack fn)
+    PredictionWorker(Prediction Worker fn)
+    PredictionPoller(Prediction Polling fn)
+    
+    ModelServingEndpoint(Model Serving Endpoint)
+    ModelInference(Model Inference image) 
+    Model(Model)
+    
+    ShowTable(Show Table)
+    RatingTable(Rating Table)
+    PredictionTable(Prediction Table)
+    
+    PredictionRequestQueue(Prediction Request Queue)
+    
+
+    Client --> APIGW
+    APIGW --> Client
+
+    APIGW -->|Request| PredictionAck
+    PredictionAck -->|PredictionId| APIGW
+    PredictionAck -->|Get show ids| ShowTable
+    
+    PredictionAck -->|Request| PredictionRequestQueue
+    
+    PredictionRequestQueue -->|Request| PredictionWorker
+    
+    PredictionWorker -->|Writes rating| RatingTable
+    PredictionWorker -->|Gets prediction| ModelServingEndpoint
+    PredictionWorker -->|Writes prediction| PredictionTable
+    
+    ModelServingEndpoint --> ModelInference
+    ModelInference --> Model
+    
+    PredictionPoller -->|Polls for result| PredictionTable
+    
+    
+    APIGW -->|Polls| PredictionPoller
+    PredictionPoller -->|Responds with prediction| APIGW
+```
+
+First: this looks more complicated than it is.
+
+The client sends a request to the API Gateway, which then calls a [lambda function](https://github.com/laaksomavrick/canihasashowplz/blob/main/prediction_ack/prediction_ack/prediction_ack.py) that returns a `PredictionId` that can be used later to retrieve the user's recommended shows.
+Model predictions can take an indeterminate length of time (but very often >30s), which is the unconfigurable timeout for API Gateway.
+So, this function delegates that work to the queue and the front-end proceeds to [poll another function](https://github.com/laaksomavrick/canihasashowplz/blob/main/prediction_getter/prediction_getter/prediction_getter.py) while awaiting a result with the `PredictionId`.
+
+In the background, work is pulled from the queue and is then [handled by a processor function](https://github.com/laaksomavrick/canihasashowplz/blob/main/prediction_worker/prediction_worker/prediction_worker.py), which is responsible for querying the model, served through SageMaker, and storing the results.
+
+Once that is done, the client can grab those results, and show the user their recommended shows.
+
+I did encounter a major snag when developing this architecture.
+As mentioned, I wanted to use serverless tech for cost savings.
+However, the maximum memory size for a [SageMaker serverless endpoint](https://docs.aws.amazon.com/SageMaker/latest/dg/serverless-endpoints.html) was 8GB.
+The model I had chosen, a direct nearest neighbours algorithm, required more memory than 8GB to make predictions.
+As a result, I had to use a worse-performing model, a graph generated leveraging the nearest neighbours algorithm, given that it was much less resource intensive. 
+Note to self: consider the infrastructure constraints you have when running any workload ahead of time.
 
 ## Operating the model
 - decouple your training and serving architecture 
