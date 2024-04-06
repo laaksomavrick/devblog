@@ -61,10 +61,10 @@ module.exports = {
             resolve: `gatsby-remark-mermaid`,
             options: /** @type {import('gatsby-remark-mermaid').Options} */ ({
               mermaidConfig: {
-                theme: 'neutral',
-                themeCSS: '.node rect { fill: #fff; }'
-              }
-            })
+                theme: "neutral",
+                themeCSS: ".node rect { fill: #fff; }",
+              },
+            }),
           },
           {
             resolve: `gatsby-remark-images`,
