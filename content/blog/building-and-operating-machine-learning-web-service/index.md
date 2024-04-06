@@ -5,26 +5,27 @@ description: The whole experience made me miss my old friend, the determinate 'i
 ---
 
 It's no secret technology circles are currently experiencing peak levels of hype regarding AI and machine learning.
-If you're reading this blog post, you likely know from your anecdotal experience: ChatGPT can more often than not write acceptable code snippets and DALL·E's image engine can generate uninspired but highly useful reproductions.
+If you're reading this blog post, you likely know this from your anecdotal experience. 
+To name a few examples, ChatGPT can more often than not write acceptable code snippets and DALL·E's image engine can generate uninspired but highly useful reproductions.
 
-Further, every quarter brings forth new capabilties, expansions, and utilizations of the core technologies backing these models.
-So, maybe the hype is [somewhat justified](https://www.google.com/finance/quote/NVDA:NASDAQ?window=6M) (author is aware at time of writing that this graph may change quite dramatically in the future, and the hype may then be somewhat unjustified).
+Further, every quarter brings forth new capabilities, expansions, and utilization of the core technologies backing these models.
+So, maybe the hype is [somewhat justified](https://www.google.com/finance/quote/NVDA:NASDAQ?window=6M) (the author is aware at the time of writing that this graph may change quite dramatically in the future, and the hype may then be somewhat unjustified).
 
 I am not smart enough to know for sure.
-But, with its collective capture of our attention, I do know its certain to be useful to learn something about the capabilities AI offers and the techniques we can leverage as software developers to capitalize. 
+But, with its collective capture of our attention, I do know it's certain to be useful to learn something about the capabilities AI offers and the techniques we can leverage as software developers to capitalize. 
 
 And so, as is my typical pattern, I wanted to build a hobby project end-to-end leveraging AI and/or machine learning to solve a small problem and learn something along the way. I settled on developing [a recommendation engine to recommend television shows](https://canihasashowplz.com/) based on input user preferences, given:
 
-- I thought it would be fun to build something that could help my spouse and I choose a new television show to watch in the evenings.
-- Recommendation engines are a feature I used in my daily life in my software products: Spotify's music recommendations, Amazon's product recommendations, the gajillion ads I am served which I do my best to block, and so on.
+- I thought it would be fun to build something that could help my spouse and myself choose a new television show to watch in the evenings.
+- Recommendation engines are a feature I use in my daily life in my software products: Spotify's music recommendations, Amazon's product recommendations, the gajillion ads I am served which I do my best to block, and so on.
 - A large public data set exists for movies, but not television shows, so I knew I would have to get the data myself, and I wanted an end-to-end experience.
 
-With that in mind, this blog post serves as a compilation of my scratchpad-notes from developing the engine, hopefully providing a good recollection and reflection on the experience that can help those reading with their own work and/or fun.
+With that in mind, this blog post serves as a compilation of my scratchpad notes from developing the engine, hopefully providing a good recollection and reflection on the experience that can help those reading with their own work and/or fun.
 
 ## Building the model
 
 The closest I come to being a data scientist in my day-to-day life is having lap time telemetry side-by-side with Formula One races on the weekends.
-I stopped learning mathematics formally in grade 11 (priorities were more centered around raising my ELO in video games than they were with doing 50 brain teasers every evening) and only came back to it in a round-about way with discrete mathematics when I segued from english and philosophy to computer science late in my post-secondary journey.
+I stopped learning mathematics formally in grade 11 (priorities were more centered around raising my ELO in video games than they were with doing 50 brain teasers every evening) and only came back to it in a round-about way with discrete mathematics when I segued from English and philosophy to computer science late in my post-secondary journey.
 
 That is to say, I really don't know linear algebra, and at this point, with my [limited and declining dendrites](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4906299/), I don't want to know.
 
@@ -64,7 +65,7 @@ show_id,user_id,rating,primary_title,start_year,end_year,genres,average_rating,n
 
 Many features here seemed like they would be good candidates for associating user preferences: users might like shows of similar genres, from similar time periods, or with high ratings in general.
 
-My hope was that these variables would all be encapsulated by users giving positive reviews, as that could be a proxy for each thing I had considered (and those I didn't).
+I hoped that these variables would all be encapsulated by users giving positive reviews, as that could be a proxy for each thing I had considered (and those I didn't).
 
 Further, after doing some ~googling~ research, I wanted to leverage a [nearest neighbours](https://scikit-learn.org/stable/modules/neighbors.html) algorithm given its widespread use and relative simplicity compared to other approaches (see [here](https://scholar.google.ca/scholar?q=nearest+neighbor+algorithm+for+recommendation+system&hl=en&as_sdt=0&as_vis=1&oi=scholart) for all the literature on the topic).
 
@@ -87,12 +88,12 @@ My data set (500,000) was small enough that doing this work on my local machine 
 
 ### Being picky
 
-Given how easy training the model is, its appropriate deciding how to evaluate them is the tricky bit.
-My approach demonstrated an [unsupervised learning](https://en.wikipedia.org/wiki/Unsupervised_learning) training method, because my model's output (television show recommendations) could not be compared against a known set of good recommendations for a particular user.
+Given how easy training the model is, it's appropriate deciding how to evaluate them is the tricky bit.
+My approach demonstrated an [unsupervised learning](https://en.wikipedia.org/wiki/Unsupervised_learning) training method because my model's output (television show recommendations) could not be compared against a known set of good recommendations for a particular user.
 
 So, I had to get a little creative in developing a heuristic to score each model and fake-it-until-i-make-it.
 In essence, my approach was to:
-- Organize my data set to select for the most prolific reviewers (i.e., the users with the most reviews against shows also in my data set).
+- Organize my data set to select the most prolific reviewers (i.e., the users with the most reviews against shows also in my data set).
 - For each prolific user, sort the television shows they have reviewed (by any dimension, this is done so comparisons are made uniformly).
 - For each prolific user, select only the first 80% of shows they have reviewed.
 - Train the model with this stratified data set.
@@ -108,9 +109,9 @@ In other words, seed random to `42`.
 ## Serving the model
 
 Having decided upon a model and with a smattering of Python scattered through notebooks, I set upon figuring out how to use this model for a web service.
-First off, and I only know this now in retrospect: your model training architecture and your model serving architecture are two separate things, and should be treated as such.
+First off, and I only know this now in retrospect: your model training architecture and your model serving architecture are two separate things and should be treated as such.
 
-With this in mind, I wanted to leverage AWS given their higher level offerings for machine learning workloads and my familiarity with their platform.
+With this in mind, I wanted to leverage AWS given their higher-level offerings for machine learning workloads and my familiarity with their platform.
 Furthermore, I wanted to use serverless technologies as much as possible given their pay-as-you-go billing model and expectation of this hobby project being very low traffic (i.e., probably just me).
 
 And so, let's overview the training and serving architectures.
@@ -165,15 +166,15 @@ The model training job takes around an hour with my relatively small data set, a
 So, I orchestrated this workflow to only occur when I want it to (i.e. triggered) instead of having it repeatedly train and output a new model as new data is ingested.
 
 A recurring thorn in my side during the development of this project was that SageMaker's bring-your-own-model APIs weren't very well documented compared to their in-platform offerings.
-Expected, given AWS offerings are usually treated as a first-class citizen in comparison to open source or third party tooling.
-If you're attempting to do something similar (such as use `scikit-learn` algorithms in AWS), the above referenced source code is a good working example.
+Expected, given AWS offerings are usually treated as a first-class citizen in comparison to open source or third-party tooling.
+If you're attempting to do something similar (such as use `scikit-learn` algorithms in AWS), the above-referenced source code is a good working example.
 
 ### Server-less than good
 
 (But still not bad, which is good enough.)
 
 I wanted to create a front-end that could query this model so that I could build a user-facing product from it.
-In addition to just querying the model directly, I wanted to orchestrate mapping television show names from user inputs to their ids in the system, or creating a new show if none was found.
+In addition to just querying the model directly, I wanted to orchestrate mapping television show names from user inputs to their IDs in the system, or creating a new show if none was found.
 Further, I wanted to store each set of user preferences as data to continue to train the model.
 Given this, some logic was required on the backend, and so an architecture to accommodate was built:
 
@@ -224,7 +225,7 @@ flowchart
     PredictionPoller -->|Responds with prediction| APIGW
 ```
 
-First: this looks more complicated than it is.
+This looks more complicated than it is.
 
 The client sends a request to the API Gateway, which then calls a [lambda function](https://github.com/laaksomavrick/canihasashowplz/blob/main/prediction_ack/prediction_ack/prediction_ack.py) that returns a `PredictionId` that can be used later to retrieve the user's recommended shows.
 Model predictions can take an indeterminate length of time (but very often >30s), which is the unconfigurable timeout for API Gateway.
@@ -243,10 +244,16 @@ Note to self: consider the infrastructure constraints you have when running any 
 
 ## Operating the model
 
+The choice to use serverless technologies as much as possible has made operating the system easier than it would be otherwise.
+As noted, it was not without some caveats: using a higher-level abstraction meant having less customizability, and this affected my choice of model.
+However, overall, I don't regret this decision, and the architecture has been plug-and-play to date.
+
+That being said, I do have some reflections.
+
 First and foremost, and as mentioned: decouple your training and service architecture.
 Do this at the logic level.
 Do this at the infrastructure level.
-I had to refactor my Cloudformation stack half way through developing the project and it was a [real PITA](https://github.com/laaksomavrick/canihasashowplz/blob/main/Makefile).
+I had to refactor my Cloudformation stack halfway through developing the project and it was a [real PITA](https://github.com/laaksomavrick/canihasashowplz/blob/main/Makefile).
 
 Secondly: version your data just like you would version your code.
 If your source code changes, your model changes.
@@ -255,22 +262,31 @@ As a consequence, the way you handle your data should be equivalent to the way y
 It's essential to have a copy of your data from each deployment in case of a disaster recovery or error-uptick situation.
 Moreover, having a copy of your data means debugging model-rot or hallucinations is much easier after the fact. 
 
-And lastly: deploying this beast resulted in one of the [gnarliest pipelines](https://github.com/laaksomavrick/canihasashowplz/blob/main/.github/workflows/deploy_sam.yaml) I have authored to date.
-Probably nothing compared to what some of witnessed between `bash` and `Jenkins`, but I've always been a 3-tier architecture kind of guy and so this represented a new dimension of complication. 
+Lastly: deploying this beast resulted in one of the [gnarliest pipelines](https://github.com/laaksomavrick/canihasashowplz/blob/main/.github/workflows/deploy_sam.yaml) I have authored to date.
+Probably nothing compared to what some of witnessed between `bash` and `Jenkins`, but I've always been a 3-tier architecture kind of guy and so this represented a new dimension of complication. There are a lot of workflows to consider when orchestrating a system like this:
+* Changing the model training infrastructure.
+* Changing the model training logic.
+* Changing the model training data.
+* Changing the model serving infrastructure.
+* Changing the model serving logic.
 
-TODO: make mermaid
+For example, in practice:
 
-- decouple your training and serving architecture 
-- version your data just like you would your source code
-- consider orchestrating end to end deployments with webhooks to save on compute time
-- many workflows involved / this stuff is complicated 
-        - Workflows to consider:
-            - Model training infra changes
-            - Model training logic changes
-            - Model training data set changes
-            - Model serving infra changes
-            - Model serving logic changes
+![canihasashowplz ci/cd pipeline](pipeline.png)
 
-## Final thoughts on the whole process, link to the app
 
-- [source code found here](https://github.com/laaksomavrick/canihasashowplz) and [here for exploration code](https://github.com/laaksomavrick/tv-show-recommender-exploration)
+Compare this to a typical MVC application, where your changes are generally:
+* Changing the app infrastructure.
+* Changing the app logic.
+
+It's a lot!
+
+## In cogito, ergo sum
+
+As stated, machine learning and AI technologies are "eating the world" and I expect it to become a regular tool in a technology worker's toolset.
+Given that, working through this project was worthwhile and I learned a lot, which is all I had hoped for.
+
+If you're interested in seeing the nitty-gritty details, the [source code is found here](https://github.com/laaksomavrick/canihasashowplz) alongside the [model exploration code](https://github.com/laaksomavrick/tv-show-recommender-exploration). The model itself is [hosted here](https://canihasashowplz.com/) as well.
+Send me an email if you have any thoughts, or feedback, or just want to shoot the breeze.
+Until next time.
+
