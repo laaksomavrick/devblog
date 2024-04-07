@@ -34,20 +34,20 @@ So, naturally, my first step towards building a model to back a recommendation s
 The gist of the process comes down to the following steps:
 
 - Examine your data set and develop an intuition for its features (i.e., properties for you developers out there) and their relationships.
-- Prepare the data to suit a particular algorithm or approach you would like to attempt
-- Select and train a model
-- Develop a heuristic for evaluating the model
-- Apply the heuristic and note the results
-- Repeat the process until you are happy with the results
+- Prepare the data to suit a particular algorithm or approach you would like to attempt.
+- Select and train a model.
+- Develop a heuristic for evaluating the model.
+- Apply the heuristic and note the results.
+- Repeat the process until you are happy with the results.
 
 ### Politely stealing data
 
 As noted, I did not have a data set publicly available to me that met my needs.
 Given my goal of a recommendation engine based on user preferences, I needed data that:
 
-- Had a feature indicating a particular user (e.g., user `A` is Bob, user `B` is Alice)
-- Had a feature indicating a particular television show (e.g., show `10` has the title 'The Sopranos')
-- Had a feature indicating user preference (e.g., show `10` has reviews by both user `A` and user `B`)
+- Had a feature indicating a particular user (e.g., user `A` is Bob, user `B` is Alice).
+- Had a feature indicating a particular television show (e.g., show `10` has the title 'The Sopranos').
+- Had a feature indicating user preference (e.g., show `10` has reviews by both user `A` and user `B`).
 
 So, I settled on [scraping IMDB's reviews](https://github.com/laaksomavrick/tv-show-recommender-exploration/blob/main/data/ratings/ratings/spiders/ratings_spider.py) given the capability to sort that data by the highest volume of reviews.
 I combined this with their [publicly available](https://developer.imdb.com/non-commercial-datasets/) data set, allowing me to create a relationship between a television show, users, and their reviews (which conveniently had a number value).
@@ -82,9 +82,9 @@ tt0043208,ur2483625,0
 
 Furthermore, there remained a few variants of the model I experimented with (why not? The legwork was already done) and I came to have three potential candidates:
 
-- A vanilla nearest neighbours model
-- A graph-based approach generated via the nearest neighbours model
-- A random forest classifier, just for fun
+- A vanilla nearest neighbours model.
+- A graph-based approach generated via the nearest neighbours model.
+- A random forest classifier, just for fun.
 
 Training the model was the easiest part of this whole process (it's really just a few lines of python) - who would have thought?
 My data set (500,000) was small enough that doing this work on my local machine was still tenable.
