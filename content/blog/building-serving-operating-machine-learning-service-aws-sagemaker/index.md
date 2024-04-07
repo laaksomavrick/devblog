@@ -1,7 +1,7 @@
 ---
-title: "Reflections on Building and Running a Machine Learning Recommendation System as a Web Service in AWS"
+title: "Building, serving, and operating a recommendation system using AWS SageMaker"
 date: "2024-04-01T00:00:00.000Z"
-description: The whole experience made me miss my old friend, the determinate 'if' statement. Read about my experience building, serving, and operating a machine-learning dependent web service.
+description: Why trawl Reddit to choose new television shows to watch when we have the technology to decide for us? Read about my experience, featuring scrapy, scikit-learn, AWS SageMaker, and GitHub Actions.
 ---
 
 It's no secret technology circles are currently experiencing peak levels of hype regarding AI and machine learning.
