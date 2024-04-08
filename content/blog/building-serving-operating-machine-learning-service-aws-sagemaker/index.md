@@ -267,7 +267,7 @@ It's essential to have a copy of your data from each deployment in case of a dis
 Moreover, having a copy of your data means debugging model-rot or hallucinations is much easier after the fact.
 
 Lastly: deploying this beast resulted in one of the [gnarliest pipelines](https://github.com/laaksomavrick/canihasashowplz/blob/main/.github/workflows/deploy_sam.yaml) I have authored to date.
-Probably nothing compared to what some of witnessed between `bash` and `Jenkins`, but I've always been a 3-tier architecture kind of guy and so this represented a new dimension of complication. There are a lot of workflows to consider when orchestrating a system like this:
+Probably nothing compared to what some have witnessed between `bash` and `Jenkins`, but I've always been a 3-tier architecture kind of guy and so this represented a new dimension of complication. There are a lot of workflows to consider when orchestrating a system like this:
 
 - Changing the model training infrastructure.
 - Changing the model training logic.
