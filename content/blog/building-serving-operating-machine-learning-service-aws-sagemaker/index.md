@@ -1,6 +1,6 @@
 ---
 title: "Building, Serving, and Operating a Recommendation System Using AWS SageMaker"
-date: "2024-04-01T00:00:00.000Z"
+date: "2024-04-08T00:00:00.000Z"
 description: Why trawl Reddit to choose new television shows to watch when we have the technology to decide for us? Read about my experience, featuring scrapy, scikit-learn, AWS SageMaker, and GitHub Actions.
 ---
 
