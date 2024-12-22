@@ -12,7 +12,7 @@ module.exports = {
     title: `technoblather`,
     author: {
       name: `Mavrick Laakso`,
-      summary: `He is an experienced software developer with eight years of technical experience.`,
+      summary: `He is an experienced software and DevOps engineer with ten years of technical experience.`,
     },
     description: `Technical blog featuring writings on developing and operating software.`,
     image: `/seo-image.png`,
