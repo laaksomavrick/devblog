@@ -12,9 +12,9 @@ module.exports = {
     title: `technoblather`,
     author: {
       name: `Mavrick Laakso`,
-      summary: `He is an experienced software and DevOps engineer with ten years of technical experience.`,
+      summary: `Occasional thoughts on the world, work, technology, and whatever is bouncing around his skull that writing can help with. `,
     },
-    description: `Technical blog featuring writings on developing and operating software.`,
+    description: `Mavrick Laakso's blog featuring writings on the world, work, and technology.`,
     image: `/seo-image.png`,
     siteUrl: `https://technoblather.ca`,
     social: {
@@ -155,12 +155,7 @@ module.exports = {
           `https://fonts.googleapis.com`,
           `https://fonts.gstatic.com`,
         ],
-        web: [
-          {
-            name: `DM Sans`,
-            file: `https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700`,
-          },
-        ],
+        web: [],
       },
     },
     {
